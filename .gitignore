@@ -1,0 +1,23 @@
+# Sensitive Configuration
+config/database.php
+config/email.php
+
+# Dependency Directories
+vendor/
+node_modules/
+
+# User Uploads (Keep folder structure, ignore contents)
+assets/files/*
+!assets/files/.gitkeep
+assets/images/rooms/*
+!assets/images/rooms/.gitkeep
+
+# System Files
+.DS_Store
+Thumbs.db
+error_log
+*.log
+
+# Editor Directories
+.idea/
+.vscode/
