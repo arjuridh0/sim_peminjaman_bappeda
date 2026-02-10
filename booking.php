@@ -310,9 +310,10 @@ require 'includes/header.php';
                     <!-- Divisi -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-building text-blue-600 mr-1"></i>Divisi <span class="text-red-500">*</span>
+                            <i class="fas fa-building text-blue-600 mr-1"></i>Unit Kerja <span
+                                class="text-red-500">*</span>
                         </label>
-                        <input type="text" name="divisi" required
+                        <input type="text" name="divisi" required placeholder="Unit Kerja"
                             class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                     </div>
 
@@ -407,8 +408,8 @@ require 'includes/header.php';
                         });
                     </script>
 
-                    <!-- RECURRING OPTION -->
-                    <div class="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <!-- RECURRING OPTION (HIDDEN) -->
+                    <div class="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100" style="display: none;">
                         <div class="flex items-center gap-3 mb-2">
                             <input type="checkbox" id="is_recurring" name="is_recurring"
                                 class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">

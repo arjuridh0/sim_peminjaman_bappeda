@@ -510,7 +510,7 @@ $title = 'Kalender Peminjaman - Admin';
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Divisi</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Unit Kerja</label>
                                 <input type="text" id="add-divisi" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="Contoh: Umum">
                             </div>
                         </div>

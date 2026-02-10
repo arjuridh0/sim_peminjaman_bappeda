@@ -184,7 +184,7 @@
                     onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/9/92/Logo_Jateng.png'">
                 <span
                     class="hidden sm:block text-base md:text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    BAPPEDA Jawa Tengah
+                    SI-PRADA
                 </span>
             </a>
 

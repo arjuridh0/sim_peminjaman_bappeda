@@ -501,7 +501,7 @@ require 'includes/header.php';
                     </div>
 
                     <div class="col-span-2 p-2 bg-gray-50 rounded border border-gray-100">
-                        <p class="text-xs text-gray-500 mb-0.5">Instansi</p>
+                        <p class="text-xs text-gray-500 mb-0.5">Instansi / Unit Kerja</p>
                         <p class="font-semibold text-gray-900 truncate">${props.instansi}${props.divisi ? ' / ' + props.divisi : ''}</p>
                     </div>
 
@@ -732,7 +732,7 @@ require 'includes/header.php';
                                 <!-- Divisi -->
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-building text-blue-600 mr-1"></i>Divisi <span class="text-red-500">*</span>
+                                        <i class="fas fa-building text-blue-600 mr-1"></i>Unit Kerja <span class="text-red-500">*</span>
                                     </label>
                                     <input type="text" name="divisi" required
                                         class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">

@@ -66,7 +66,7 @@ $bookings = get_all_bookings_admin($statusFilter);
         <div class="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
             <!-- Search Box -->
             <div class="relative w-full sm:w-64">
-                <input type="text" id="searchInput" placeholder="Cari Nama / Instansi / Kode..."
+                <input type="text" id="searchInput" placeholder="Cari Nama / Instansi / Unit Kerja / Kode..."
                     class="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             </div>
@@ -93,6 +93,7 @@ $bookings = get_all_bookings_admin($statusFilter);
                     <th class="px-6 py-3">Peminjam</th>
                     <th class="px-6 py-3">Kegiatan</th>
                     <th class="px-6 py-3">Kode Booking</th>
+                    <th class="px-6 py-3">Unit Kerja</th>
                     <th class="px-6 py-3">Status</th>
                     <th class="px-6 py-3 text-center">Aksi</th>
                 </tr>
