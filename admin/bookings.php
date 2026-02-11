@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', 'Invalid security token.');
-        redirect('bookings.php');
+        redirect('admin/bookings.php');
     }
 
     if (isset($_POST['action'])) {
@@ -18,10 +18,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Di sini kita langsung approve saja.
             update_booking_status($bookingId, 'disetujui');
 
-            // Get booking details for email
+            // Get booking details for notification
             $booking = get_booking_by_id($bookingId);
             if ($booking) {
-                send_approval_notification($booking);
+                // Send notification (wrapped in try-catch to prevent blocking)
+                try {
+                    send_approval_notification($booking);
+                } catch (Exception $e) {
+                    error_log("Approval notification failed: " . $e->getMessage());
+                }
             }
 
             set_flash_message('success', 'Booking berhasil disetujui.');
@@ -29,10 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reason = $_POST['rejection_reason'];
             update_booking_status($bookingId, 'ditolak', $reason);
 
-            // Get booking details for email
+            // Get booking details for notification
             $booking = get_booking_by_id($bookingId);
             if ($booking) {
-                send_rejection_notification($booking);
+                // Send notification (wrapped in try-catch to prevent blocking)
+                try {
+                    send_rejection_notification($booking);
+                } catch (Exception $e) {
+                    error_log("Rejection notification failed: " . $e->getMessage());
+                }
             }
 
             set_flash_message('success', 'Booking telah ditolak.');
@@ -45,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_flash_message('success', 'Booking berhasil dibatalkan.');
         }
     }
-    redirect('bookings.php');
+    redirect('admin/bookings.php');
 }
 
 require_once 'header.php';

@@ -37,8 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', "Invalid security token.");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     $bookingId = $_POST['booking_id'] ?? null;
@@ -47,8 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (empty($verification)) {
         set_flash_message('error', "Kode Booking wajib diisi untuk verifikasi pembatalan.");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     // Get booking original
@@ -59,21 +57,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (!$booking) {
         set_flash_message('error', "Booking tidak ditemukan");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     // Security Check: Verify Booking Code (qr_token)
     if ($booking['qr_token'] !== $verification) {
         set_flash_message('error', "Kode Booking tidak valid! Pembatalan gagal.");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     if (!in_array($booking['status'], ['menunggu', 'disetujui'])) {
         set_flash_message('error', "Hanya booking dengan status 'Menunggu' atau 'Disetujui' yang dapat dibatalkan.");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     // Execute Cancel

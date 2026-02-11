@@ -9,7 +9,7 @@ if ($id) {
     $item = get_room_by_id($id);
     if (!$item) {
         set_flash_message('error', 'Ruangan tidak ditemukan.');
-        redirect('rooms.php');
+        redirect('admin/rooms.php');
     }
     $isEdit = true;
 }
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', 'Invalid security token.');
-        redirect('rooms.php');
+        redirect('admin/rooms.php');
     }
 
     $name = $_POST['name'];
@@ -53,11 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Atau, kita hentikan proses simpan? 
                 // Kita beri pesan error dan hentikan proses.
                 set_flash_message('error', 'Gagal memindahkan file gambar.');
-                redirect($isEdit ? "room_form.php?id=$id" : "room_form.php");
+                redirect($isEdit ? "admin/room_form.php?id=$id" : "admin/room_form.php");
             }
         } else {
             set_flash_message('error', 'Format gambar tidak valid atau ukuran > 2MB (Hanya JPG, PNG, WEBP).');
-            redirect($isEdit ? "room_form.php?id=$id" : "room_form.php");
+            redirect($isEdit ? "admin/room_form.php?id=$id" : "admin/room_form.php");
         }
     }
 
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash_message('success', 'Ruangan berhasil ditambahkan.');
     }
 
-    redirect('rooms.php');
+    redirect('admin/rooms.php');
 }
 
 require_once 'header.php';

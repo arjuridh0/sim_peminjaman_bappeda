@@ -1,6 +1,7 @@
 <?php
 // includes/functions.php
 
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/whatsapp.php';
 
@@ -51,7 +52,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // Helper: Base URL
 function base_url($path = '')
 {
-    // Deteksi otomatis base URL - ALWAYS dari root project
+    // PRIORITY 1: Use BASE_URL constant if defined (most reliable)
+    if (defined('BASE_URL')) {
+        $baseUrl = BASE_URL;
+        return $path ? "$baseUrl/" . ltrim($path, '/') : $baseUrl;
+    }
+
+    // PRIORITY 2: Auto-detect (fallback for development)
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
     $host = $_SERVER['HTTP_HOST'];
 
@@ -59,7 +66,7 @@ function base_url($path = '')
     $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
 
     // Cari posisi project folder
-    $projectFolder = defined('PROJECT_FOLDER') ? PROJECT_FOLDER : 'sim_peminjaman_bappeda';
+    $projectFolder = defined('PROJECT_FOLDER') ? PROJECT_FOLDER : 'siprada3';
 
     if (preg_match('#^(.*?/' . preg_quote($projectFolder, '#') . ')/#', $scriptPath, $matches)) {
         $projectPath = $matches[1];
@@ -83,23 +90,43 @@ function set_flash_message($type, $message)
     $_SESSION[$type] = $message;
 }
 
+
 // Helper: Redirect
 function redirect($path)
 {
-    // Jika path dimulai dengan '/', anggap absolute dari root project
-    // Jika tidak, anggap relative dari current directory
-    if (strpos($path, '/') === 0) {
-        // Absolute path dari root project
-        header("Location: " . base_url($path));
-    } elseif (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0) {
-        // Full URL
+    // ALWAYS use absolute URL to prevent browser from misresolving paths
+    if (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0) {
+        // Full URL - use as is
         header("Location: " . $path);
     } else {
-        // Relative path - redirect relative to current script location
-        header("Location: " . $path);
+        // Convert to absolute URL using base_url()
+        // Remove leading slash if present (base_url will add it)
+        $cleanPath = ltrim($path, '/');
+        header("Location: " . base_url($cleanPath));
     }
     exit;
 }
+
+// Helper: Redirect Back (Safe alternative to HTTP_REFERER)
+function redirect_back($fallback = 'index.php')
+{
+    // Check if HTTP_REFERER exists and is from same domain
+    if (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
+        $referer = $_SERVER['HTTP_REFERER'];
+        $refererHost = parse_url($referer, PHP_URL_HOST);
+        $currentHost = $_SERVER['HTTP_HOST'];
+
+        // Only redirect to referer if it's from the same domain (security)
+        if ($refererHost === $currentHost) {
+            header("Location: " . $referer);
+            exit;
+        }
+    }
+
+    // Fallback: redirect to specified page
+    redirect($fallback);
+}
+
 
 // ==============================================================================
 // SECURITY FUNCTIONS

@@ -82,15 +82,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Send Email Notification ONLY ONCE (for the triggered booking) to avoid spam
-        // We assume this represents the series action.
+        // Send Notification ONLY ONCE (for the triggered booking) to avoid spam
+        // Wrapped in try-catch to prevent blocking the success response
         if ($action === 'approve') {
-            send_approval_notification($booking);
+            try {
+                send_approval_notification($booking);
+            } catch (Exception $e) {
+                error_log("Approval notification failed: " . $e->getMessage());
+            }
             $msg = $applyToSeries ? "Seluruh seri booking berhasil disetujui." : "Booking berhasil disetujui.";
             echo json_encode(['success' => true, 'message' => $msg]);
 
         } elseif ($action === 'reject') {
-            send_rejection_notification($booking);
+            try {
+                send_rejection_notification($booking);
+            } catch (Exception $e) {
+                error_log("Rejection notification failed: " . $e->getMessage());
+            }
             $msg = $applyToSeries ? "Seluruh seri booking telah ditolak." : "Booking telah ditolak.";
             echo json_encode(['success' => true, 'message' => $msg]);
 

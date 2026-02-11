@@ -6,6 +6,23 @@ DirectoryIndex index.php
     RewriteEngine On
 </IfModule>
 
+# ============================================
+# ModSecurity Bypass for Booking System
+# ============================================
+# Disable ModSecurity for booking.php to prevent false positives
+<IfModule mod_security.c>
+    <Files "booking.php">
+        SecRuleEngine Off
+    </Files>
+</IfModule>
+
+# Disable ModSecurity for API endpoints
+<IfModule mod_security.c>
+    <FilesMatch "^(admin_update_booking_status|get_bookings)\.php$">
+        SecRuleEngine Off
+    </FilesMatch>
+</IfModule>
+
 # Security Headers
 <IfModule mod_headers.c>
     # Prevent clickjacking

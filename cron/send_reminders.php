@@ -2,7 +2,7 @@
 /**
  * Cron Job: Send H-1 Reminder Notifications
  * 
- * This script should be run daily (recommended at 9 AM) to send reminder emails
+ * This script should be run daily (recommended at 9 AM) to send reminder notifications
  * to users who have approved bookings for tomorrow.
  * 
  * Cron setup example (Linux):
@@ -34,8 +34,8 @@ try {
         JOIN rooms r ON b.room_id = r.id
         WHERE b.tanggal = ? 
         AND b.status = 'disetujui'
-        AND b.user_email IS NOT NULL
-        AND b.user_email != ''
+        AND b.phone_number IS NOT NULL
+        AND b.phone_number != ''
     ";
 
     $stmt = $pdo->prepare($sql);
@@ -47,14 +47,19 @@ try {
 
     // Send reminder for each booking
     foreach ($bookings as $booking) {
-        $result = send_reminder_notification($booking);
+        try {
+            $result = send_reminder_notification($booking);
 
-        if ($result) {
-            $sentCount++;
-            log_message("✓ Reminder sent to: {$booking['user_email']} (Booking ID: {$booking['id']})");
-        } else {
+            if ($result) {
+                $sentCount++;
+                log_message("✓ Reminder sent to: {$booking['phone_number']} (Booking ID: {$booking['id']})");
+            } else {
+                $failedCount++;
+                log_message("✗ Failed to send reminder to: {$booking['phone_number']} (Booking ID: {$booking['id']})");
+            }
+        } catch (Exception $e) {
             $failedCount++;
-            log_message("✗ Failed to send reminder to: {$booking['user_email']} (Booking ID: {$booking['id']})");
+            log_message("✗ Exception sending reminder to: {$booking['phone_number']} (Booking ID: {$booking['id']}) - " . $e->getMessage());
         }
     }
 

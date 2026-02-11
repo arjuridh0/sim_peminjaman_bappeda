@@ -8,8 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 0. Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', "Invalid security token. Please try again.");
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
-        exit;
+        redirect_back();
     }
 
     // 1. Validasi Input
@@ -17,8 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($required as $field) {
         if (empty($_POST[$field])) {
             set_flash_message('error', "Semua field wajib diisi");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
     }
 
@@ -36,8 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($isRecurring) {
         if (!$recurrenceType || !$endDate) {
             set_flash_message('error', "Tipe pengulangan dan tanggal akhir wajib diisi untuk booking berulang.");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         // Generate Dates
@@ -50,8 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($endDateTime > $maxDate) {
             set_flash_message('error', "Maksimal booking berulang adalah 1 tahun.");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         // Add pattern logic 
@@ -74,8 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Check initial date conflict
         if (check_booking_conflict($roomId, $iterDate->format('Y-m-d'), $waktuMulai, $waktuSelesai)) {
             set_flash_message('error', "Maaf, ruangan sudah terpakai pada tanggal " . $iterDate->format('d/m/Y'));
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         // Advance to next
@@ -87,8 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Check Conflict
             if (check_booking_conflict($roomId, $dateStr, $waktuMulai, $waktuSelesai)) {
                 set_flash_message('error', "Gagal booking berulang: Ruangan sudah terpakai pada tanggal " . $iterDate->format('d/m/Y') . ". Mohon pilih tanggal lain atau sesuaikan jadwal.");
-                header('Location: ' . $_SERVER['HTTP_REFERER']);
-                exit;
+                redirect_back();
             }
 
             $recurrenceDates[] = $dateStr;
@@ -98,8 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Single Booking Conflict Check
         if (check_booking_conflict($roomId, $tanggal, $waktuMulai, $waktuSelesai)) {
             set_flash_message('error', "Maaf, ruangan sudah terpakai pada waktu tersebut");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
     }
 
@@ -108,8 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($_POST['instansi'] === 'lainnya') {
         if (empty($_FILES['file_pendukung']['name'])) {
             set_flash_message('error', "File pendukung wajib diunggah untuk instansi lainnya");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         $file = $_FILES['file_pendukung'];
@@ -118,14 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!in_array($ext, $allowed)) {
             set_flash_message('error', "Format file tidak valid");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         if ($file['size'] > 5 * 1024 * 1024) { // 5MB
             set_flash_message('error', "Ukuran file terlalu besar (Max 5MB)");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
 
         $uploadDir = __DIR__ . '/assets/files/';
@@ -138,8 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filePath = 'assets/files/' . $fileName;
         } else {
             set_flash_message('error', "Gagal upload file");
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
-            exit;
+            redirect_back();
         }
     }
 
@@ -240,8 +229,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bookingData['waktu_mulai'] = $waktuMulai;
         $bookingData['waktu_selesai'] = $waktuSelesai;
 
-        send_booking_notification_to_admin($bookingData);
-        send_booking_confirmation($bookingData);
+        // Send notifications (wrapped in try-catch to prevent blocking the booking process)
+        // Even if notification fails, booking is already saved
+        try {
+            send_booking_notification_to_admin($bookingData);
+            send_booking_confirmation($bookingData);
+        } catch (Exception $notifError) {
+            // Log error but don't stop the process
+            error_log("Notification failed: " . $notifError->getMessage());
+        }
 
         // SECURE REDIRECT: Store token in session and redirect to access granted view
         $_SESSION['access_token'] = $qrToken;
@@ -251,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction())
             $pdo->rollBack();
         set_flash_message('error', "Terjadi kesalahan sistem: " . $e->getMessage());
-        header('Location: ' . $_SERVER['HTTP_REFERER']);
+        redirect_back();
     }
 
     exit;

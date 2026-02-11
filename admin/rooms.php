@@ -5,13 +5,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', 'Invalid security token.');
-        redirect('rooms.php');
+        redirect('admin/rooms.php');
     }
 
     $roomId = $_POST['room_id'];
     delete_room($roomId);
     set_flash_message('success', 'Ruangan berhasil dihapus.');
-    redirect('rooms.php');
+    redirect('admin/rooms.php');
 }
 
 require_once 'header.php';
