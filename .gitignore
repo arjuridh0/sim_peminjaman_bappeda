@@ -1,6 +1,5 @@
 # Sensitive Configuration
 config/database.php
-config/email.php
 config/whatsapp.php
 
 # Dependency Directories

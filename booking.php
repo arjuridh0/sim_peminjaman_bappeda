@@ -151,7 +151,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bookingData = [
             'room_id' => $roomId,
             'nama_peminjam' => $_POST['nama_peminjam'],
-            'user_email' => $_POST['user_email'],
             'divisi' => $_POST['divisi'],
             'instansi' => $_POST['instansi'],
             'kegiatan' => $_POST['kegiatan'],
@@ -172,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add recurring flags to $bookingData if needed, but create_booking function might not accept extra fields unless updated.
         // Easier to direct insert or update create_booking. Let's direct insert for full control in this block.
 
-        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
+        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
 
         // Generate QR Token (Use the new readable format function)
         $qrToken = generate_booking_code($tanggal, $waktuMulai);
@@ -181,7 +180,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $roomId,
             $_POST['nama_peminjam'],
-            $_POST['user_email'] ?? null,
             $_POST['phone_number'] ?? null,
             $_POST['divisi'],
             $_POST['instansi'],
@@ -204,14 +202,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtPattern->execute([$parentId, $recurrenceType, $endDate]);
 
             // Insert Children
-            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
+            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
 
             foreach ($recurrenceDates as $rDate) {
                 $childToken = generate_booking_code($rDate, $waktuMulai);
                 $stmtChild->execute([
                     $roomId,
                     $_POST['nama_peminjam'],
-                    $_POST['user_email'],
+                    $_POST['phone_number'] ?? null,
                     $_POST['divisi'],
                     $_POST['instansi'],
                     $_POST['kegiatan'],
@@ -236,7 +234,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Prepare booking data for notifications
         $bookingData['id'] = $parentId;
         $bookingData['qr_token'] = $qrToken;
-        $bookingData['user_email'] = $_POST['user_email'] ?? null;
         $bookingData['phone_number'] = $_POST['phone_number'] ?? null;
         $bookingData['nama_peminjam'] = $_POST['nama_peminjam'];
         $bookingData['tanggal'] = $tanggal;
@@ -447,42 +444,20 @@ require 'includes/header.php';
                     </div>
 
 
-                    <!-- Email & WhatsApp (Salah satu wajib) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-envelope text-blue-600 mr-1"></i>Email
-                            </label>
-                            <input type="email" name="user_email" id="emailInput" placeholder="email@example.com"
-                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp
-                            </label>
-                            <input type="tel" name="phone_number" id="phoneInput" placeholder="08xxx"
-                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                        </div>
+                    <!-- WhatsApp (Wajib) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp <span
+                                class="text-red-500">*</span>
+                        </label>
+                        <input type="tel" name="phone_number" id="phoneInput" placeholder="08xxx" required
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                        <p class="mt-1 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Nomor WhatsApp wajib diisi untuk menerima notifikasi.
+                        </p>
                     </div>
-                    <p class="mt-1 text-sm text-gray-500">
-                        <i class="fas fa-info-circle mr-1"></i>*Harap isi minimal satu kontak (Email atau WhatsApp) untuk menerima notifikasi.
-                    </p>
 
-                    <script>
-                        document.querySelector('form').addEventListener('submit', function (e) {
-                            const email = document.getElementById('emailInput').value.trim();
-                            const phone = document.getElementById('phoneInput').value.trim();
 
-                            if (!email && !phone) {
-                                e.preventDefault();
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Kontak Diperlukan',
-                                    text: 'Harap isi minimal satu kontak (Email atau Nomor WhatsApp)!'
-                                });
-                            }
-                        });
-                    </script>
                 </div>
 
                 <!-- File Upload (Conditional) -->
@@ -563,7 +538,7 @@ require 'includes/header.php';
         if (this.checkValidity()) {
             Swal.fire({
                 title: 'Memproses...',
-                text: 'Mohon tunggu, sedang mengirim data dan email konfirmasi.',
+                text: 'Mohon tunggu, sedang mengirim data.',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();

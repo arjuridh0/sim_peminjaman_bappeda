@@ -4,9 +4,8 @@
 
 1. **debug.php** - Script debugging umum
 2. **debug_user_wa.php** - Script test notifikasi WA user
-3. **test_email.php** - Script test email
-4. **test_wa.php** - Script test WhatsApp admin
-5. **conflict.log** - Log file konflik (tidak diperlukan)
+3. **test_wa.php** - Script test WhatsApp admin
+4. **conflict.log** - Log file konflik (tidak diperlukan)
 
 ## Cara Hapus di cPanel File Manager:
 
@@ -21,7 +20,6 @@
 ✅ **KEEP** (jangan dihapus):
 
 - config/database.php
-- config/email.php
 - config/whatsapp.php
 
 File-file config ini HARUS ada di hosting, tapi:
@@ -47,11 +45,10 @@ Boleh dihapus jika ingin menghemat space:
 ```
 [ ] Hapus debug.php
 [ ] Hapus debug_user_wa.php
-[ ] Hapus test_email.php
 [ ] Hapus test_wa.php
 [ ] Hapus conflict.log
 [ ] (Opsional) Hapus file dokumentasi .md
 [ ] (Opsional) Hapus cleanup_for_deployment.bat
 ```
 
-**Total file yang harus dihapus: 5 file wajib + 5 file opsional**
+**Total file yang harus dihapus: 4 file wajib + 5 file opsional**

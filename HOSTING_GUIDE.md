@@ -14,7 +14,7 @@ Sebelum upload ke hosting, kita perlu menyiapkan file-file yang "hilang" dari Gi
 
 1.  **Pastikan Folder `vendor` Lengkap**
     - Karena folder `vendor/` di-_ignore_ oleh git, Anda harus memilikinya di komputer lokal.
-    - Pastikan di folder project Anda saat ini (`c:\laragon\www\sim_peminjaman_bappeda`) sudah ada folder `vendor` yang berisi library `phpmailer` dan `tcpdf`.
+    - Pastikan di folder project Anda saat ini (`c:\laragon\www\sim_peminjaman_bappeda`) sudah ada folder `vendor` yang berisi library `tcpdf`.
     - _Jika belum ada_, buka terminal di folder project dan jalankan: `composer install`.
 
 2.  **Siapkan File Database**
@@ -160,21 +160,18 @@ try {
 
 ---
 
-## 📧 Tahap 5: Konfigurasi Email (Opsional)
+## 📱 Tahap 5: Konfigurasi WhatsApp (Opsional)
 
-Jika fitur notifikasi email penting, lakukan hal yang sama untuk `config/email.php`.
+Jika fitur notifikasi WhatsApp penting, lakukan hal yang sama untuk `config/whatsapp.php`.
 
-1.  Di folder `config`, buat/edit `email.php`.
-2.  Pastikan isinya sesuai dengan konfigurasi SMTP Gmail Anda (seperti yang ada di komputer lokal, tapi pastikan App Password-nya benar).
+1.  Di folder `config`, buat/edit `whatsapp.php`.
+2.  Pastikan isinya sesuai dengan konfigurasi API Fonnte Anda.
 
 ```php
 <?php
-// config/email.php
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_USERNAME', 'email.anda@gmail.com');
-define('SMTP_PASSWORD', 'app-password-anda'); // JANGAN PAKAI PASSWORD LOGIN BIASA, PAKAI APP PASSWORD
-define('SMTP_PORT', 587);
-define('SMTP_FROM_NAME', 'Sistem Peminjaman BAPPEDA');
+// config/whatsapp.php
+define('WA_API_TOKEN', 'token-fonnte-anda');
+define('WA_ADMIN_PHONE', '628123456789'); // Format: 628xxx
 ?>
 ```
 
@@ -197,7 +194,7 @@ define('SMTP_FROM_NAME', 'Sistem Peminjaman BAPPEDA');
   - **Solusi:** Cek folder `assets/images/rooms`. Karena di `.gitignore` folder ini di-ignore, Anda mungkin perlu upload manual gambar-gambarnya dari komputer lokal ke folder yang sama di hosting via File Manager.
   - Pastikan permission folder `assets` adalah `755`.
 
-- **Masalah:** Error `Class 'TCPDF' not found` atau `PHPMailer not found`.
+- **Masalah:** Error `Class 'TCPDF' not found`.
   - **Solusi:** Ini berarti folder `vendor` belum ter-upload dengan benar. Ulangi upload folder `vendor` dari komputer lokal.
 
 Selamat mencoba! Jika ada kendala di langkah tertentu, kabari saya pesan error-nya.

@@ -2,15 +2,7 @@
 // includes/functions.php
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/email.php';
 require_once __DIR__ . '/../config/whatsapp.php';
-require_once __DIR__ . '/email_templates.php';
-
-// Load Composer autoloader for PHPMailer
-require_once __DIR__ . '/../vendor/autoload.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 // Start Session with Security Enhancements
 if (session_status() === PHP_SESSION_NONE) {
@@ -166,61 +158,8 @@ function sanitize_input($data)
 }
 
 // ==============================================================================
-// EMAIL FUNCTIONS
+// WHATSAPP NOTIFICATION FUNCTIONS
 // ==============================================================================
-
-/**
- * Send Email using PHPMailer
- * 
- * @param string $to Recipient email address
- * @param string $subject Email subject
- * @param string $htmlBody HTML email body
- * @param string $textBody Plain text alternative (optional)
- * @return bool Success status
- */
-function send_email($to, $subject, $htmlBody, $textBody = '')
-{
-    try {
-        $mail = new PHPMailer(true);
-
-        // Server settings
-        $mail->isSMTP();
-        $mail->Host = SMTP_HOST;
-        $mail->SMTPAuth = SMTP_AUTH;
-        $mail->Username = SMTP_USERNAME;
-        $mail->Password = SMTP_PASSWORD;
-        $mail->SMTPSecure = SMTP_ENCRYPTION;
-        $mail->Port = SMTP_PORT;
-        $mail->CharSet = EMAIL_CHARSET;
-
-        // Debug mode (0 = off, 1 = client, 2 = client + server)
-        $mail->SMTPDebug = EMAIL_DEBUG;
-
-        // Recipients
-        $mail->setFrom(EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME);
-        $mail->addAddress($to);
-        $mail->addReplyTo(EMAIL_REPLY_TO, EMAIL_FROM_NAME);
-
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $mail->Body = $htmlBody;
-        $mail->AltBody = $textBody ?: strip_tags($htmlBody);
-
-        // Send email
-        $mail->send();
-
-        // Log success (optional)
-        error_log("Email sent successfully to: $to - Subject: $subject");
-
-        return true;
-
-    } catch (Exception $e) {
-        // Log error
-        error_log("Email sending failed to: $to - Error: {$mail->ErrorInfo}");
-        return false;
-    }
-}
 
 /**
  * Send WhatsApp Message using Fonnte API
@@ -304,7 +243,7 @@ function send_whatsapp($target, $message)
 }
 
 /**
- * Send New Booking Notification to Admin
+ * Send New Booking Notification to Admin (WhatsApp Only)
  * 
  * @param array $booking Booking data with room info
  * @return bool Success status
@@ -317,15 +256,7 @@ function send_booking_notification_to_admin($booking)
         $booking['room_name'] = $room['name'] ?? 'Unknown Room';
     }
 
-    $subject = '📋 Peminjaman Ruangan Baru - ' . $booking['room_name'];
-    $htmlBody = template_new_booking_admin($booking);
-    $textBody = get_plain_text_version($booking, 'new_booking');
-
-    // 1. Send Email
-    $emailResult = send_email(ADMIN_EMAIL, $subject, $htmlBody, $textBody);
-
-    // 2. Send WhatsApp
-    // Format message for WA
+    // Send WhatsApp to Admin
     $waMessage = "🔔 *PEMINJAMAN BARU* 🔔\n\n";
     $waMessage .= "👤 *Peminjam:* " . $booking['nama_peminjam'] . " (" . $booking['instansi'] . ")\n";
     $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
@@ -336,13 +267,11 @@ function send_booking_notification_to_admin($booking)
     $waMessage .= "👇 *Aksi Cepat:* \n";
     $waMessage .= base_url('admin/bookings.php?search=' . $booking['qr_token']);
 
-    $waResult = send_whatsapp(WA_ADMIN_PHONE, $waMessage);
-
-    return $emailResult || $waResult; // Return true if at least one succeeds
+    return send_whatsapp(WA_ADMIN_PHONE, $waMessage);
 }
 
 /**
- * Send Booking Confirmation to User
+ * Send Booking Confirmation to User (WhatsApp Only)
  * Sent immediately after user creates a booking
  * 
  * @param array $booking Booking data
@@ -356,161 +285,105 @@ function send_booking_confirmation($booking)
         $booking['room_name'] = $room['name'] ?? 'Unknown Room';
     }
 
-    $subject = '✅ Konfirmasi Peminjaman - ' . $booking['room_name'];
-    $htmlBody = template_booking_confirmation($booking);
-    $textBody = get_plain_text_version($booking, 'confirmation');
-
-    // Get user email
-    $userEmail = $booking['user_email'] ?? null;
-    if (!$userEmail && empty($booking['phone_number'])) {
-        error_log("Cannot send confirmation: No email or phone number found for booking ID " . ($booking['id'] ?? 'unknown'));
+    // Send WhatsApp only (if phone number exists)
+    if (empty($booking['phone_number'])) {
+        error_log("Cannot send confirmation: No phone number found for booking ID " . ($booking['id'] ?? 'unknown'));
         return false;
     }
 
-    // 1. Send Email (if email provided)
-    $emailResult = false;
-    if ($userEmail) {
-        $emailResult = send_email($userEmail, $subject, $htmlBody, $textBody);
-    }
+    $waMessage = "⏳ *KONFIRMASI PEMINJAMAN* ⏳\n\n";
+    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
+    $waMessage .= "Permintaan peminjaman Anda telah diterima dan sedang menunggu persetujuan.\n\n";
+    $waMessage .= "📋 *Detail Peminjaman:*\n";
+    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
+    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
+    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
+    $waMessage .= "🔢 *Kode Booking:* *" . $booking['qr_token'] . "*\n";
+    $waMessage .= "_(Simpan kode ini untuk cek status)_\n\n";
+    $waMessage .= "🔗 *Cek Status:* \n" . base_url('booking_status.php?search=' . $booking['qr_token']);
 
-    // 2. Send WhatsApp (if phone number exists)
-    $waResult = false;
-    if (!empty($booking['phone_number'])) {
-        $waMessage = "⏳ *KONFIRMASI PEMINJAMAN* ⏳\n\n";
-        $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-        $waMessage .= "Permintaan peminjaman Anda telah diterima dan sedang menunggu persetujuan.\n\n";
-        $waMessage .= "📋 *Detail Peminjaman:*\n";
-        $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-        $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-        $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-        $waMessage .= "🔢 *Kode Booking:* *" . $booking['qr_token'] . "*\n";
-        $waMessage .= "_(Simpan kode ini untuk cek status)_\n\n";
-        $waMessage .= "🔗 *Cek Status:* \n" . base_url('booking_status.php?search=' . $booking['qr_token']);
-
-        $waResult = send_whatsapp($booking['phone_number'], $waMessage);
-    }
-
-    return $emailResult || $waResult;
+    return send_whatsapp($booking['phone_number'], $waMessage);
 }
 
 /**
- * Send Approval Notification to User
+ * Send Approval Notification to User (WhatsApp Only)
  * 
  * @param array $booking Booking data
  * @return bool Success status
  */
 function send_approval_notification($booking)
 {
-    // Skip if no email provided
-    if (empty($booking['user_email'])) {
-        error_log("Approval notification skipped - no email for booking ID: " . $booking['id']);
+    // Send WhatsApp only (if phone number exists)
+    if (empty($booking['phone_number'])) {
+        error_log("Approval notification skipped - no phone number for booking ID: " . $booking['id']);
         return false;
     }
 
-    $subject = '✅ Peminjaman Ruangan Disetujui - ' . $booking['room_name'];
-    $htmlBody = template_booking_approved($booking);
-    $textBody = get_plain_text_version($booking, 'approved');
+    $waMessage = "✅ *PEMINJAMAN DISETUJUI!* ✅\n\n";
+    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
+    $waMessage .= "Kabar gembira! Peminjaman ruangan Anda telah *DISETUJUI*.\n\n";
+    $waMessage .= "📋 *Detail Peminjaman:*\n";
+    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
+    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
+    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
+    $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
+    $waMessage .= "⚠️ *Catatan:* Harap hadir tepat waktu dan menjaga kebersihan ruangan.\n";
+    $waMessage .= "Terima kasih.";
 
-    // 1. Send Email
-    $emailResult = send_email($booking['user_email'], $subject, $htmlBody, $textBody);
-
-    // 2. Send WhatsApp (if phone number exists)
-    $waResult = false;
-    if (!empty($booking['phone_number'])) {
-        $waMessage = "✅ *PEMINJAMAN DISETUJUI!* ✅\n\n";
-        $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-        $waMessage .= "Kabar gembira! Peminjaman ruangan Anda telah *DISETUJUI*.\n\n";
-        $waMessage .= "📋 *Detail Peminjaman:*\n";
-        $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-        $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-        $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-        $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
-        $waMessage .= "⚠️ *Catatan:* Harap hadir tepat waktu dan menjaga kebersihan ruangan.\n";
-        $waMessage .= "Terima kasih.";
-
-        $waResult = send_whatsapp($booking['phone_number'], $waMessage);
-    }
-
-    return $emailResult || $waResult;
+    return send_whatsapp($booking['phone_number'], $waMessage);
 }
 
 /**
- * Send Rejection Notification to User
+ * Send Rejection Notification to User (WhatsApp Only)
  * 
  * @param array $booking Booking data with rejection reason
  * @return bool Success status
  */
 function send_rejection_notification($booking)
 {
-    // Skip if no email provided
-    if (empty($booking['user_email'])) {
-        error_log("Rejection notification skipped - no email for booking ID: " . $booking['id']);
+    // Send WhatsApp only (if phone number exists)
+    if (empty($booking['phone_number'])) {
+        error_log("Rejection notification skipped - no phone number for booking ID: " . $booking['id']);
         return false;
     }
 
-    $subject = '❌ Peminjaman Ruangan Ditolak - ' . $booking['room_name'];
-    $htmlBody = template_booking_rejected($booking);
-    $textBody = get_plain_text_version($booking, 'rejected');
+    $waMessage = "❌ *PEMINJAMAN DITOLAK* ❌\n\n";
+    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
+    $waMessage .= "Mohon maaf, pengajuan peminjaman ruangan Anda tidak dapat kami setujui.\n\n";
+    $waMessage .= "📋 *Detail Peminjaman:*\n";
+    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
+    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
+    $waMessage .= "⚠️ *Alasan Penolakan:* " . ($booking['rejection_reason'] ?? '-') . "\n\n";
+    $waMessage .= "Silahkan ajukan peminjaman untuk waktu atau ruangan lain.";
 
-    // 1. Send Email
-    $emailResult = send_email($booking['user_email'], $subject, $htmlBody, $textBody);
-
-    // 2. Send WhatsApp (if phone number exists)
-    $waResult = false;
-    if (!empty($booking['phone_number'])) {
-        $waMessage = "❌ *PEMINJAMAN DITOLAK* ❌\n\n";
-        $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-        $waMessage .= "Mohon maaf, pengajuan peminjaman ruangan Anda tidak dapat kami setujui.\n\n";
-        $waMessage .= "📋 *Detail Peminjaman:*\n";
-        $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-        $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-        $waMessage .= "⚠️ *Alasan Penolakan:* " . ($booking['rejection_reason'] ?? '-') . "\n\n";
-        $waMessage .= "Silahkan ajukan peminjaman untuk waktu atau ruangan lain.";
-
-        $waResult = send_whatsapp($booking['phone_number'], $waMessage);
-    }
-
-    return $emailResult || $waResult;
+    return send_whatsapp($booking['phone_number'], $waMessage);
 }
 
 /**
- * Send H-1 Reminder Notification to User
+ * Send H-1 Reminder Notification to User (WhatsApp Only)
  * 
  * @param array $booking Booking data
  * @return bool Success status
  */
 function send_reminder_notification($booking)
 {
-    // Skip if no email provided
-    if (empty($booking['user_email'])) {
-        error_log("Reminder notification skipped - no email for booking ID: " . $booking['id']);
+    // Send WhatsApp only (if phone number exists)
+    if (empty($booking['phone_number'])) {
+        error_log("Reminder notification skipped - no phone number for booking ID: " . $booking['id']);
         return false;
     }
 
-    $subject = '🔔 Pengingat: Peminjaman Besok - ' . $booking['room_name'];
-    $htmlBody = template_booking_reminder($booking);
-    $textBody = get_plain_text_version($booking, 'reminder');
+    $waMessage = "🔔 *PENGINGAT PEMINJAMAN* 🔔\n\n";
+    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
+    $waMessage .= "Mengingatkan bahwa Anda memiliki jadwal peminjaman ruangan *BESOK*.\n\n";
+    $waMessage .= "📋 *Detail Peminjaman:*\n";
+    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
+    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
+    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
+    $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
+    $waMessage .= "Harap hadir tepat waktu.";
 
-    // 1. Send Email
-    $emailResult = send_email($booking['user_email'], $subject, $htmlBody, $textBody);
-
-    // 2. Send WhatsApp (if phone number exists)
-    $waResult = false;
-    if (!empty($booking['phone_number'])) {
-        $waMessage = "🔔 *PENGINGAT PEMINJAMAN* 🔔\n\n";
-        $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-        $waMessage .= "Mengingatkan bahwa Anda memiliki jadwal peminjaman ruangan *BESOK*.\n\n";
-        $waMessage .= "📋 *Detail Peminjaman:*\n";
-        $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-        $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-        $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-        $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
-        $waMessage .= "Harap hadir tepat waktu.";
-
-        $waResult = send_whatsapp($booking['phone_number'], $waMessage);
-    }
-
-    return $emailResult || $waResult;
+    return send_whatsapp($booking['phone_number'], $waMessage);
 }
 
 
