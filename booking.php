@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add recurring flags to $bookingData if needed, but create_booking function might not accept extra fields unless updated.
         // Easier to direct insert or update create_booking. Let's direct insert for full control in this block.
 
-        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
+        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
 
         // Generate QR Token (Use the new readable format function)
         $qrToken = generate_booking_code($tanggal, $waktuMulai);
@@ -181,7 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $roomId,
             $_POST['nama_peminjam'],
-            $_POST['user_email'],
+            $_POST['user_email'] ?? null,
+            $_POST['phone_number'] ?? null,
             $_POST['divisi'],
             $_POST['instansi'],
             $_POST['kegiatan'],
@@ -232,11 +233,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['new_booking_token'] = $qrToken;
         $_SESSION['booking_id'] = $parentId;
 
-        // Email Notification (Simple version: just notify for the main booking)
-        // Or should we notify that it is a recurring series?
+        // Prepare booking data for notifications
         $bookingData['id'] = $parentId;
         $bookingData['qr_token'] = $qrToken;
-        $bookingData['email'] = $_POST['user_email']; // ensure key matches
+        $bookingData['user_email'] = $_POST['user_email'] ?? null;
+        $bookingData['phone_number'] = $_POST['phone_number'] ?? null;
+        $bookingData['nama_peminjam'] = $_POST['nama_peminjam'];
+        $bookingData['tanggal'] = $tanggal;
+        $bookingData['waktu_mulai'] = $waktuMulai;
+        $bookingData['waktu_selesai'] = $waktuSelesai;
 
         send_booking_notification_to_admin($bookingData);
         send_booking_confirmation($bookingData);
@@ -442,18 +447,42 @@ require 'includes/header.php';
                     </div>
 
 
-                    <!-- Email (Wajib) -->
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-envelope text-blue-600 mr-1"></i>Email <span class="text-red-500">*</span>
-                        </label>
-                        <input type="email" name="user_email" placeholder="email@example.com" required
-                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                        <p class="mt-1 text-sm text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>Email wajib diisi untuk menerima Kode Booking
-                            konfirmasi.
-                        </p>
+                    <!-- Email & WhatsApp (Salah satu wajib) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-envelope text-blue-600 mr-1"></i>Email
+                            </label>
+                            <input type="email" name="user_email" id="emailInput" placeholder="email@example.com"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp
+                            </label>
+                            <input type="tel" name="phone_number" id="phoneInput" placeholder="08xxx"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                        </div>
                     </div>
+                    <p class="mt-1 text-sm text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>*Harap isi minimal satu kontak (Email atau WhatsApp) untuk menerima notifikasi.
+                    </p>
+
+                    <script>
+                        document.querySelector('form').addEventListener('submit', function (e) {
+                            const email = document.getElementById('emailInput').value.trim();
+                            const phone = document.getElementById('phoneInput').value.trim();
+
+                            if (!email && !phone) {
+                                e.preventDefault();
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Kontak Diperlukan',
+                                    text: 'Harap isi minimal satu kontak (Email atau Nomor WhatsApp)!'
+                                });
+                            }
+                        });
+                    </script>
                 </div>
 
                 <!-- File Upload (Conditional) -->

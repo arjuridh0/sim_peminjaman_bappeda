@@ -249,6 +249,19 @@ $title = 'Tambah Booking Manual';
 
         // Prepare Data
         const formData = new FormData(this);
+
+        // Validation: At least email or phone must be filled
+        const email = formData.get('user_email');
+        const phone = formData.get('phone_number');
+        if (!email && !phone) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Kontak Diperlukan',
+                text: 'Harap isi minimal satu kontak (Email atau Nomor WhatsApp)!'
+            });
+            return;
+        }
+        const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
 
         // Show Loading

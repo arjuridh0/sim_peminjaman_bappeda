@@ -796,16 +796,25 @@ require 'includes/header.php';
                                         class="timepicker-quick w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none bg-white">
                                 </div>
 
-                                <!-- Email -->
+                                <!-- Email & No. HP (Salah satu wajib) -->
+                                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-envelope text-blue-600 mr-1"></i>Email
+                                        </label>
+                                        <input type="email" name="user_email" id="quickEmail" placeholder="opsional jika ada WA"
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp
+                                        </label>
+                                        <input type="tel" name="phone_number" id="quickPhone" placeholder="08xxx (Wajib jika tidak ada Email)"
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                                    </div>
+                                </div>
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-envelope text-blue-600 mr-1"></i>Email <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="email" name="user_email" placeholder="email@example.com" required
-                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                                    <p class="mt-1 text-sm text-gray-500">
-                                        <i class="fas fa-info-circle mr-1"></i>Email wajib diisi untuk menerima Kode Booking
-                                    </p>
+                                    <p class="text-xs text-gray-500 italic mb-2">*Harap isi minimal satu kontak (Email atau WhatsApp) untuk menerima notifikasi.</p>
                                 </div>
 
                                 <!-- File Upload (Conditional) -->
