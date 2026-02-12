@@ -8,7 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 0. Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', "Invalid security token. Please try again.");
-        redirect_back();
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
+        exit;
     }
 
     // 1. Validasi Input
@@ -16,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($required as $field) {
         if (empty($_POST[$field])) {
             set_flash_message('error', "Semua field wajib diisi");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
     }
 
@@ -34,7 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($isRecurring) {
         if (!$recurrenceType || !$endDate) {
             set_flash_message('error', "Tipe pengulangan dan tanggal akhir wajib diisi untuk booking berulang.");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         // Generate Dates
@@ -47,7 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($endDateTime > $maxDate) {
             set_flash_message('error', "Maksimal booking berulang adalah 1 tahun.");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         // Add pattern logic 
@@ -70,7 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Check initial date conflict
         if (check_booking_conflict($roomId, $iterDate->format('Y-m-d'), $waktuMulai, $waktuSelesai)) {
             set_flash_message('error', "Maaf, ruangan sudah terpakai pada tanggal " . $iterDate->format('d/m/Y'));
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         // Advance to next
@@ -82,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Check Conflict
             if (check_booking_conflict($roomId, $dateStr, $waktuMulai, $waktuSelesai)) {
                 set_flash_message('error', "Gagal booking berulang: Ruangan sudah terpakai pada tanggal " . $iterDate->format('d/m/Y') . ". Mohon pilih tanggal lain atau sesuaikan jadwal.");
-                redirect_back();
+                header('Location: ' . $_SERVER['HTTP_REFERER']);
+                exit;
             }
 
             $recurrenceDates[] = $dateStr;
@@ -92,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Single Booking Conflict Check
         if (check_booking_conflict($roomId, $tanggal, $waktuMulai, $waktuSelesai)) {
             set_flash_message('error', "Maaf, ruangan sudah terpakai pada waktu tersebut");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
     }
 
@@ -101,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($_POST['instansi'] === 'lainnya') {
         if (empty($_FILES['file_pendukung']['name'])) {
             set_flash_message('error', "File pendukung wajib diunggah untuk instansi lainnya");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         $file = $_FILES['file_pendukung'];
@@ -110,12 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!in_array($ext, $allowed)) {
             set_flash_message('error', "Format file tidak valid");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         if ($file['size'] > 5 * 1024 * 1024) { // 5MB
             set_flash_message('error', "Ukuran file terlalu besar (Max 5MB)");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
 
         $uploadDir = __DIR__ . '/assets/files/';
@@ -128,7 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filePath = 'assets/files/' . $fileName;
         } else {
             set_flash_message('error', "Gagal upload file");
-            redirect_back();
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            exit;
         }
     }
 
@@ -140,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bookingData = [
             'room_id' => $roomId,
             'nama_peminjam' => $_POST['nama_peminjam'],
+            'user_email' => $_POST['user_email'],
             'divisi' => $_POST['divisi'],
             'instansi' => $_POST['instansi'],
             'kegiatan' => $_POST['kegiatan'],
@@ -160,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add recurring flags to $bookingData if needed, but create_booking function might not accept extra fields unless updated.
         // Easier to direct insert or update create_booking. Let's direct insert for full control in this block.
 
-        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
+        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
 
         // Generate QR Token (Use the new readable format function)
         $qrToken = generate_booking_code($tanggal, $waktuMulai);
@@ -169,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $roomId,
             $_POST['nama_peminjam'],
-            $_POST['phone_number'] ?? null,
+            $_POST['user_email'],
             $_POST['divisi'],
             $_POST['instansi'],
             $_POST['kegiatan'],
@@ -191,14 +203,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtPattern->execute([$parentId, $recurrenceType, $endDate]);
 
             // Insert Children
-            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
+            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
 
             foreach ($recurrenceDates as $rDate) {
                 $childToken = generate_booking_code($rDate, $waktuMulai);
                 $stmtChild->execute([
                     $roomId,
                     $_POST['nama_peminjam'],
-                    $_POST['phone_number'] ?? null,
+                    $_POST['user_email'],
                     $_POST['divisi'],
                     $_POST['instansi'],
                     $_POST['kegiatan'],
@@ -220,24 +232,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['new_booking_token'] = $qrToken;
         $_SESSION['booking_id'] = $parentId;
 
-        // Prepare booking data for notifications
+        // Email Notification (Simple version: just notify for the main booking)
+        // Or should we notify that it is a recurring series?
         $bookingData['id'] = $parentId;
         $bookingData['qr_token'] = $qrToken;
-        $bookingData['phone_number'] = $_POST['phone_number'] ?? null;
-        $bookingData['nama_peminjam'] = $_POST['nama_peminjam'];
-        $bookingData['tanggal'] = $tanggal;
-        $bookingData['waktu_mulai'] = $waktuMulai;
-        $bookingData['waktu_selesai'] = $waktuSelesai;
+        $bookingData['email'] = $_POST['user_email']; // ensure key matches
 
-        // Send notifications (wrapped in try-catch to prevent blocking the booking process)
-        // Even if notification fails, booking is already saved
-        try {
-            send_booking_notification_to_admin($bookingData);
-            send_booking_confirmation($bookingData);
-        } catch (Exception $notifError) {
-            // Log error but don't stop the process
-            error_log("Notification failed: " . $notifError->getMessage());
-        }
+        send_booking_notification_to_admin($bookingData);
+        send_booking_confirmation($bookingData);
 
         // SECURE REDIRECT: Store token in session and redirect to access granted view
         $_SESSION['access_token'] = $qrToken;
@@ -247,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction())
             $pdo->rollBack();
         set_flash_message('error', "Terjadi kesalahan sistem: " . $e->getMessage());
-        redirect_back();
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
     }
 
     exit;
@@ -305,13 +307,12 @@ require 'includes/header.php';
                             class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                     </div>
 
-                    <!-- Divisi -->
+                    <!-- Unit Kerja -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-building text-blue-600 mr-1"></i>Unit Kerja <span
-                                class="text-red-500">*</span>
+                            <i class="fas fa-building text-blue-600 mr-1"></i>Unit Kerja <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" name="divisi" required placeholder="Unit Kerja"
+                        <input type="text" name="divisi" required placeholder="Cth: UMPEG"
                             class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                     </div>
 
@@ -406,8 +407,8 @@ require 'includes/header.php';
                         });
                     </script>
 
-                    <!-- RECURRING OPTION (HIDDEN) -->
-                    <div class="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100" style="display: none;">
+                    <!-- RECURRING OPTION -->
+                    <div class="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
                         <div class="flex items-center gap-3 mb-2">
                             <input type="checkbox" id="is_recurring" name="is_recurring"
                                 class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
@@ -440,20 +441,18 @@ require 'includes/header.php';
                     </div>
 
 
-                    <!-- WhatsApp (Wajib) -->
-                    <div>
+                    <!-- Email (Wajib) -->
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp <span
-                                class="text-red-500">*</span>
+                            <i class="fas fa-envelope text-blue-600 mr-1"></i>Email <span class="text-red-500">*</span>
                         </label>
-                        <input type="tel" name="phone_number" id="phoneInput" placeholder="08xxx" required
+                        <input type="email" name="user_email" placeholder="email@example.com" required
                             class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                         <p class="mt-1 text-sm text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>Nomor WhatsApp wajib diisi untuk menerima notifikasi.
+                            <i class="fas fa-info-circle mr-1"></i>Email wajib diisi untuk menerima Kode Booking
+                            konfirmasi.
                         </p>
                     </div>
-
-
                 </div>
 
                 <!-- File Upload (Conditional) -->
@@ -534,7 +533,7 @@ require 'includes/header.php';
         if (this.checkValidity()) {
             Swal.fire({
                 title: 'Memproses...',
-                text: 'Mohon tunggu, sedang mengirim data.',
+                text: 'Mohon tunggu, sedang mengirim data dan email konfirmasi.',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();

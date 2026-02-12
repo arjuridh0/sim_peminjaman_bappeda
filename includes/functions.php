@@ -1,9 +1,15 @@
 <?php
 // includes/functions.php
 
-require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/whatsapp.php';
+require_once __DIR__ . '/../config/email.php';
+require_once __DIR__ . '/email_templates.php';
+
+// Load Composer autoloader for PHPMailer
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 // Start Session with Security Enhancements
 if (session_status() === PHP_SESSION_NONE) {
@@ -52,13 +58,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // Helper: Base URL
 function base_url($path = '')
 {
-    // PRIORITY 1: Use BASE_URL constant if defined (most reliable)
-    if (defined('BASE_URL')) {
-        $baseUrl = BASE_URL;
-        return $path ? "$baseUrl/" . ltrim($path, '/') : $baseUrl;
-    }
-
-    // PRIORITY 2: Auto-detect (fallback for development)
+    // Deteksi otomatis base URL - ALWAYS dari root project
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
     $host = $_SERVER['HTTP_HOST'];
 
@@ -66,7 +66,7 @@ function base_url($path = '')
     $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
 
     // Cari posisi project folder
-    $projectFolder = defined('PROJECT_FOLDER') ? PROJECT_FOLDER : 'siprada3';
+    $projectFolder = defined('PROJECT_FOLDER') ? PROJECT_FOLDER : 'siprada_v1';
 
     if (preg_match('#^(.*?/' . preg_quote($projectFolder, '#') . ')/#', $scriptPath, $matches)) {
         $projectPath = $matches[1];
@@ -90,43 +90,23 @@ function set_flash_message($type, $message)
     $_SESSION[$type] = $message;
 }
 
-
 // Helper: Redirect
 function redirect($path)
 {
-    // ALWAYS use absolute URL to prevent browser from misresolving paths
-    if (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0) {
-        // Full URL - use as is
+    // Jika path dimulai dengan '/', anggap absolute dari root project
+    // Jika tidak, anggap relative dari current directory
+    if (strpos($path, '/') === 0) {
+        // Absolute path dari root project
+        header("Location: " . base_url($path));
+    } elseif (strpos($path, 'http://') === 0 || strpos($path, 'https://') === 0) {
+        // Full URL
         header("Location: " . $path);
     } else {
-        // Convert to absolute URL using base_url()
-        // Remove leading slash if present (base_url will add it)
-        $cleanPath = ltrim($path, '/');
-        header("Location: " . base_url($cleanPath));
+        // Relative path - redirect relative to current script location
+        header("Location: " . $path);
     }
     exit;
 }
-
-// Helper: Redirect Back (Safe alternative to HTTP_REFERER)
-function redirect_back($fallback = 'index.php')
-{
-    // Check if HTTP_REFERER exists and is from same domain
-    if (isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER'])) {
-        $referer = $_SERVER['HTTP_REFERER'];
-        $refererHost = parse_url($referer, PHP_URL_HOST);
-        $currentHost = $_SERVER['HTTP_HOST'];
-
-        // Only redirect to referer if it's from the same domain (security)
-        if ($refererHost === $currentHost) {
-            header("Location: " . $referer);
-            exit;
-        }
-    }
-
-    // Fallback: redirect to specified page
-    redirect($fallback);
-}
-
 
 // ==============================================================================
 // SECURITY FUNCTIONS
@@ -185,92 +165,64 @@ function sanitize_input($data)
 }
 
 // ==============================================================================
-// WHATSAPP NOTIFICATION FUNCTIONS
+// EMAIL FUNCTIONS
 // ==============================================================================
 
 /**
- * Send WhatsApp Message using Fonnte API
+ * Send Email using PHPMailer
  * 
- * @param string $target Phone number (08xxx or 628xxx)
- * @param string $message Message content
+ * @param string $to Recipient email address
+ * @param string $subject Email subject
+ * @param string $htmlBody HTML email body
+ * @param string $textBody Plain text alternative (optional)
  * @return bool Success status
  */
-function send_whatsapp($target, $message)
+function send_email($to, $subject, $htmlBody, $textBody = '')
 {
-    // Check if WA is enabled
-    if (!defined('WA_ENABLED') || !WA_ENABLED) {
-        return false;
-    }
-
-    // Check if token is configured
-    if (!defined('WA_API_TOKEN') || WA_API_TOKEN === 'TOKEN_ANDA_DISINI' || empty(WA_API_TOKEN)) {
-        error_log("WhatsApp Error: Token invalid or not configured.");
-        return false;
-    }
-
-    // Format phone number: convert 08xxx to 628xxx
-    $target = trim($target);
-    if (substr($target, 0, 1) === '0') {
-        $target = '62' . substr($target, 1);
-    }
-    // Remove any non-numeric characters
-    $target = preg_replace('/[^0-9]/', '', $target);
-
     try {
-        $curl = curl_init();
+        $mail = new PHPMailer(true);
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => array(
-                'target' => $target,
-                'message' => $message,
-                'countryCode' => '62', // Default to Indonesia
-            ),
-            CURLOPT_HTTPHEADER => array(
-                'Authorization: ' . WA_API_TOKEN
-            ),
-        ));
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = SMTP_HOST;
+        $mail->SMTPAuth = SMTP_AUTH;
+        $mail->Username = SMTP_USERNAME;
+        $mail->Password = SMTP_PASSWORD;
+        $mail->SMTPSecure = SMTP_ENCRYPTION;
+        $mail->Port = SMTP_PORT;
+        $mail->CharSet = EMAIL_CHARSET;
 
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        // Debug mode (0 = off, 1 = client, 2 = client + server)
+        $mail->SMTPDebug = EMAIL_DEBUG;
 
-        if (curl_errno($curl)) {
-            $error_msg = curl_error($curl);
-            error_log("WhatsApp cURL Error: " . $error_msg);
-        }
+        // Recipients
+        $mail->setFrom(EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME);
+        $mail->addAddress($to);
+        $mail->addReplyTo(EMAIL_REPLY_TO, EMAIL_FROM_NAME);
 
-        curl_close($curl);
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $htmlBody;
+        $mail->AltBody = $textBody ?: strip_tags($htmlBody);
 
-        // Simple check: if HTTP 200 and response contains "status":true
-        if ($httpCode == 200 && $response) {
-            $json = json_decode($response, true);
-            if (isset($json['status']) && $json['status'] == true) {
-                error_log("WhatsApp sent successfully to: $target");
-                return true;
-            } else {
-                error_log("WhatsApp API Error: " . $response);
-                return false;
-            }
-        }
+        // Send email
+        $mail->send();
 
-        error_log("WhatsApp Request Failed. HTTP Code: $httpCode. Response: $response");
-        return false;
+        // Log success (optional)
+        error_log("Email sent successfully to: $to - Subject: $subject");
+
+        return true;
 
     } catch (Exception $e) {
-        error_log("WhatsApp Exception: " . $e->getMessage());
+        // Log error
+        error_log("Email sending failed to: $to - Error: {$mail->ErrorInfo}");
         return false;
     }
 }
 
 /**
- * Send New Booking Notification to Admin (WhatsApp Only)
+ * Send New Booking Notification to Admin
  * 
  * @param array $booking Booking data with room info
  * @return bool Success status
@@ -283,22 +235,15 @@ function send_booking_notification_to_admin($booking)
         $booking['room_name'] = $room['name'] ?? 'Unknown Room';
     }
 
-    // Send WhatsApp to Admin
-    $waMessage = "🔔 *PEMINJAMAN BARU* 🔔\n\n";
-    $waMessage .= "👤 *Peminjam:* " . $booking['nama_peminjam'] . " (" . $booking['instansi'] . ")\n";
-    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-    $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n";
-    $waMessage .= "🔢 *Kode Booking:* " . $booking['qr_token'] . "\n\n";
-    $waMessage .= "👇 *Aksi Cepat:* \n";
-    $waMessage .= base_url('admin/bookings.php?search=' . $booking['qr_token']);
+    $subject = '📋 Peminjaman Ruangan Baru - ' . $booking['room_name'];
+    $htmlBody = template_new_booking_admin($booking);
+    $textBody = get_plain_text_version($booking, 'new_booking');
 
-    return send_whatsapp(WA_ADMIN_PHONE, $waMessage);
+    return send_email(ADMIN_EMAIL, $subject, $htmlBody, $textBody);
 }
 
 /**
- * Send Booking Confirmation to User (WhatsApp Only)
+ * Send Booking Confirmation to User
  * Sent immediately after user creates a booking
  * 
  * @param array $booking Booking data
@@ -312,105 +257,81 @@ function send_booking_confirmation($booking)
         $booking['room_name'] = $room['name'] ?? 'Unknown Room';
     }
 
-    // Send WhatsApp only (if phone number exists)
-    if (empty($booking['phone_number'])) {
-        error_log("Cannot send confirmation: No phone number found for booking ID " . ($booking['id'] ?? 'unknown'));
+    $subject = '✅ Konfirmasi Peminjaman - ' . $booking['room_name'];
+    $htmlBody = template_booking_confirmation($booking);
+    $textBody = get_plain_text_version($booking, 'confirmation');
+
+    // Get user email
+    $userEmail = $booking['email'] ?? null;
+    if (!$userEmail) {
+        error_log("Cannot send confirmation: No email found for booking ID " . $booking['id']);
         return false;
     }
 
-    $waMessage = "⏳ *KONFIRMASI PEMINJAMAN* ⏳\n\n";
-    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-    $waMessage .= "Permintaan peminjaman Anda telah diterima dan sedang menunggu persetujuan.\n\n";
-    $waMessage .= "📋 *Detail Peminjaman:*\n";
-    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-    $waMessage .= "🔢 *Kode Booking:* *" . $booking['qr_token'] . "*\n";
-    $waMessage .= "_(Simpan kode ini untuk cek status)_\n\n";
-    $waMessage .= "🔗 *Cek Status:* \n" . base_url('booking_status.php?search=' . $booking['qr_token']);
-
-    return send_whatsapp($booking['phone_number'], $waMessage);
+    return send_email($userEmail, $subject, $htmlBody, $textBody);
 }
 
 /**
- * Send Approval Notification to User (WhatsApp Only)
+ * Send Approval Notification to User
  * 
  * @param array $booking Booking data
  * @return bool Success status
  */
 function send_approval_notification($booking)
 {
-    // Send WhatsApp only (if phone number exists)
-    if (empty($booking['phone_number'])) {
-        error_log("Approval notification skipped - no phone number for booking ID: " . $booking['id']);
+    // Skip if no email provided
+    if (empty($booking['user_email'])) {
+        error_log("Approval notification skipped - no email for booking ID: " . $booking['id']);
         return false;
     }
 
-    $waMessage = "✅ *PEMINJAMAN DISETUJUI!* ✅\n\n";
-    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-    $waMessage .= "Kabar gembira! Peminjaman ruangan Anda telah *DISETUJUI*.\n\n";
-    $waMessage .= "📋 *Detail Peminjaman:*\n";
-    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-    $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
-    $waMessage .= "⚠️ *Catatan:* Harap hadir tepat waktu dan menjaga kebersihan ruangan.\n";
-    $waMessage .= "Terima kasih.";
+    $subject = '✅ Peminjaman Ruangan Disetujui - ' . $booking['room_name'];
+    $htmlBody = template_booking_approved($booking);
+    $textBody = get_plain_text_version($booking, 'approved');
 
-    return send_whatsapp($booking['phone_number'], $waMessage);
+    return send_email($booking['user_email'], $subject, $htmlBody, $textBody);
 }
 
 /**
- * Send Rejection Notification to User (WhatsApp Only)
+ * Send Rejection Notification to User
  * 
  * @param array $booking Booking data with rejection reason
  * @return bool Success status
  */
 function send_rejection_notification($booking)
 {
-    // Send WhatsApp only (if phone number exists)
-    if (empty($booking['phone_number'])) {
-        error_log("Rejection notification skipped - no phone number for booking ID: " . $booking['id']);
+    // Skip if no email provided
+    if (empty($booking['user_email'])) {
+        error_log("Rejection notification skipped - no email for booking ID: " . $booking['id']);
         return false;
     }
 
-    $waMessage = "❌ *PEMINJAMAN DITOLAK* ❌\n\n";
-    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-    $waMessage .= "Mohon maaf, pengajuan peminjaman ruangan Anda tidak dapat kami setujui.\n\n";
-    $waMessage .= "📋 *Detail Peminjaman:*\n";
-    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-    $waMessage .= "⚠️ *Alasan Penolakan:* " . ($booking['rejection_reason'] ?? '-') . "\n\n";
-    $waMessage .= "Silahkan ajukan peminjaman untuk waktu atau ruangan lain.";
+    $subject = '❌ Peminjaman Ruangan Ditolak - ' . $booking['room_name'];
+    $htmlBody = template_booking_rejected($booking);
+    $textBody = get_plain_text_version($booking, 'rejected');
 
-    return send_whatsapp($booking['phone_number'], $waMessage);
+    return send_email($booking['user_email'], $subject, $htmlBody, $textBody);
 }
 
 /**
- * Send H-1 Reminder Notification to User (WhatsApp Only)
+ * Send H-1 Reminder Notification to User
  * 
  * @param array $booking Booking data
  * @return bool Success status
  */
 function send_reminder_notification($booking)
 {
-    // Send WhatsApp only (if phone number exists)
-    if (empty($booking['phone_number'])) {
-        error_log("Reminder notification skipped - no phone number for booking ID: " . $booking['id']);
+    // Skip if no email provided
+    if (empty($booking['user_email'])) {
+        error_log("Reminder notification skipped - no email for booking ID: " . $booking['id']);
         return false;
     }
 
-    $waMessage = "🔔 *PENGINGAT PEMINJAMAN* 🔔\n\n";
-    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
-    $waMessage .= "Mengingatkan bahwa Anda memiliki jadwal peminjaman ruangan *BESOK*.\n\n";
-    $waMessage .= "📋 *Detail Peminjaman:*\n";
-    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
-    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
-    $waMessage .= "⏰ *Waktu:* " . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "\n";
-    $waMessage .= "📝 *Kegiatan:* " . $booking['kegiatan'] . "\n\n";
-    $waMessage .= "Harap hadir tepat waktu.";
+    $subject = '🔔 Pengingat: Peminjaman Besok - ' . $booking['room_name'];
+    $htmlBody = template_booking_reminder($booking);
+    $textBody = get_plain_text_version($booking, 'reminder');
 
-    return send_whatsapp($booking['phone_number'], $waMessage);
+    return send_email($booking['user_email'], $subject, $htmlBody, $textBody);
 }
 
 

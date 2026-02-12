@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
         set_flash_message('error', 'Invalid security token.');
-        redirect('admin/bookings.php');
+        redirect('bookings.php');
     }
 
     if (isset($_POST['action'])) {
@@ -18,15 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Di sini kita langsung approve saja.
             update_booking_status($bookingId, 'disetujui');
 
-            // Get booking details for notification
+            // Get booking details for email
             $booking = get_booking_by_id($bookingId);
             if ($booking) {
-                // Send notification (wrapped in try-catch to prevent blocking)
-                try {
-                    send_approval_notification($booking);
-                } catch (Exception $e) {
-                    error_log("Approval notification failed: " . $e->getMessage());
-                }
+                send_approval_notification($booking);
             }
 
             set_flash_message('success', 'Booking berhasil disetujui.');
@@ -34,15 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reason = $_POST['rejection_reason'];
             update_booking_status($bookingId, 'ditolak', $reason);
 
-            // Get booking details for notification
+            // Get booking details for email
             $booking = get_booking_by_id($bookingId);
             if ($booking) {
-                // Send notification (wrapped in try-catch to prevent blocking)
-                try {
-                    send_rejection_notification($booking);
-                } catch (Exception $e) {
-                    error_log("Rejection notification failed: " . $e->getMessage());
-                }
+                send_rejection_notification($booking);
             }
 
             set_flash_message('success', 'Booking telah ditolak.');
@@ -55,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_flash_message('success', 'Booking berhasil dibatalkan.');
         }
     }
-    redirect('admin/bookings.php');
+    redirect('bookings.php');
 }
 
 require_once 'header.php';
@@ -76,7 +66,7 @@ $bookings = get_all_bookings_admin($statusFilter);
         <div class="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
             <!-- Search Box -->
             <div class="relative w-full sm:w-64">
-                <input type="text" id="searchInput" placeholder="Cari Nama / Instansi / Unit Kerja / Kode..."
+                <input type="text" id="searchInput" placeholder="Cari Nama / Instansi / Kode..."
                     class="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             </div>
@@ -103,7 +93,6 @@ $bookings = get_all_bookings_admin($statusFilter);
                     <th class="px-6 py-3">Peminjam</th>
                     <th class="px-6 py-3">Kegiatan</th>
                     <th class="px-6 py-3">Kode Booking</th>
-                    <th class="px-6 py-3">Unit Kerja</th>
                     <th class="px-6 py-3">Status</th>
                     <th class="px-6 py-3 text-center">Aksi</th>
                 </tr>

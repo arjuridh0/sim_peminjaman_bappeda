@@ -501,7 +501,7 @@ require 'includes/header.php';
                     </div>
 
                     <div class="col-span-2 p-2 bg-gray-50 rounded border border-gray-100">
-                        <p class="text-xs text-gray-500 mb-0.5">Instansi / Unit Kerja</p>
+                        <p class="text-xs text-gray-500 mb-0.5">Instansi</p>
                         <p class="font-semibold text-gray-900 truncate">${props.instansi}${props.divisi ? ' / ' + props.divisi : ''}</p>
                     </div>
 
@@ -729,12 +729,12 @@ require 'includes/header.php';
                                         class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                                 </div>
 
-                                <!-- Divisi -->
+                                <!-- Unit Kerja -->
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                                         <i class="fas fa-building text-blue-600 mr-1"></i>Unit Kerja <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text" name="divisi" required
+                                    <input type="text" name="divisi" required placeholder="Cth: UMPEG"
                                         class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
                                 </div>
 
@@ -796,25 +796,16 @@ require 'includes/header.php';
                                         class="timepicker-quick w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none bg-white">
                                 </div>
 
-                                <!-- Email & No. HP (Salah satu wajib) -->
-                                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-envelope text-blue-600 mr-1"></i>Email
-                                        </label>
-                                        <input type="email" name="user_email" id="quickEmail" placeholder="opsional jika ada WA"
-                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp
-                                        </label>
-                                        <input type="tel" name="phone_number" id="quickPhone" placeholder="08xxx (Wajib jika tidak ada Email)"
-                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                                    </div>
-                                </div>
+                                <!-- Email -->
                                 <div class="md:col-span-2">
-                                    <p class="text-xs text-gray-500 italic mb-2">*Harap isi minimal satu kontak (Email atau WhatsApp) untuk menerima notifikasi.</p>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-envelope text-blue-600 mr-1"></i>Email <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="email" name="user_email" placeholder="email@example.com" required
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                                    <p class="mt-1 text-sm text-gray-500">
+                                        <i class="fas fa-info-circle mr-1"></i>Email wajib diisi untuk menerima Kode Booking
+                                    </p>
                                 </div>
 
                                 <!-- File Upload (Conditional) -->

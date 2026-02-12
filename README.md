@@ -15,13 +15,13 @@ Sistem ini dirancang untuk mempermudah pegawai dalam melihat ketersediaan ruanga
 - **Cek Jadwal Real-time**: Kalender interaktif untuk melihat slot kosong.
 - **Smart Search**: Cari ruangan berdasarkan kapasitas dan waktu.
 - **Booking Online**: Pengajuan peminjaman cepat lewat form / kalender.
-- **Notifikasi WhatsApp**: Otomatis terima kode booking via WhatsApp.
+- **Notifikasi Email**: Otomatis terima kode booking & QR Code via email.
 - **Pantau Status**: Cek status pengajuan (Menunggu/Disetujui/Ditolak).
 
 ### 🛡️ Untuk Admin
 
 - **Dashboard Analitik**: Statistik penggunaan ruangan & tren bulanan.
-- **Approval System**: Setujui atau tolak pengajuan dengan alasan + notifikasi WhatsApp.
+- **Approval System**: Setujui atau tolak pengajuan dengan alasan + notifikasi email.
 - **Manajemen Ruangan**: Tambah/Edit/Hapus data ruangan & fasilitas.
 - **Lobby Display**: Mode tampilan TV untuk dipasang di layar lobi gedung.
 
@@ -34,7 +34,7 @@ Sistem ini dirancang untuk mempermudah pegawai dalam melihat ketersediaan ruanga
 - **Frontend**: Tailwind CSS, Vanilla JS
 - **Libraries**:
   - **FullCalendar**: Tampilan jadwal interaktif.
-  - **Fonnte API**: Pengiriman notifikasi WhatsApp.
+  - **PHPMailer**: Pengiriman notifikasi email.
   - **TCPDF**: Export laporan/bukti booking.
   - **SweetAlert2**: Notifikasi popup modern.
 
@@ -50,7 +50,7 @@ Panduan tersebut mencakup:
 
 1.  Persiapan Database (Import SQL).
 2.  Konfigurasi Koneksi (`config/database.php`).
-3.  Konfigurasi WhatsApp API (`config/whatsapp.php`).
+3.  Konfigurasi Email Gmail (`config/email.php`).
 
 ---
 
@@ -69,7 +69,7 @@ sim_peminjaman_bappeda/
 ├── admin/                  # Halaman & logika Admin Panel
 ├── api/                    # Endpoint JSON untuk AJAX (Calendar, Search, dll)
 ├── assets/                 # File statis (Images, Uploads PDF)
-├── config/                 # Konfigurasi Database & WhatsApp
+├── config/                 # Konfigurasi Database & Email
 ├── includes/               # Fungsi inti (Auth, Helper, Database Wrapper)
 ├── vendor/                 # Library pihak ketiga (Composer)
 ├── booking.php             # Form booking user

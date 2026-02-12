@@ -1,6 +1,6 @@
 # Sensitive Configuration
 config/database.php
-config/whatsapp.php
+config/email.php
 
 # Dependency Directories
 vendor/
@@ -12,26 +12,6 @@ assets/files/*
 assets/images/rooms/*
 !assets/images/rooms/.gitkeep
 
-# Test Files
-test_*.php
-test_*.py
-*_test.php
-debug*.php
-temp*.php
-*.py
-
-# Temporary Files
-*.tmp
-*.bak
-*.swp
-*~
-
-# Archives
-*.zip
-*.rar
-*.tar
-*.gz
-
 # System Files
 .DS_Store
 Thumbs.db
@@ -41,4 +21,3 @@ error_log
 # Editor Directories
 .idea/
 .vscode/
-*.code-workspace

@@ -6,47 +6,6 @@ DirectoryIndex index.php
     RewriteEngine On
 </IfModule>
 
-# ============================================
-# ModSecurity Bypass for Booking System
-# ============================================
-# CRITICAL: Disable ModSecurity for all booking-related files
-# to prevent false positives blocking legitimate POST requests
-
-<IfModule mod_security.c>
-    # Main booking pages
-    <FilesMatch "^(booking|booking_status|room_detail|calendar)\.php$">
-        SecRuleEngine Off
-    </FilesMatch>
-    
-    # Admin panel (entire admin folder)
-    <LocationMatch "^/siprada3/admin/">
-        SecRuleEngine Off
-    </LocationMatch>
-    
-    # API endpoints
-    <LocationMatch "^/siprada3/api/">
-        SecRuleEngine Off
-    </LocationMatch>
-</IfModule>
-
-# Alternative syntax for mod_security2
-<IfModule mod_security2.c>
-    # Main booking pages
-    <FilesMatch "^(booking|booking_status|room_detail|calendar)\.php$">
-        SecRuleEngine Off
-    </FilesMatch>
-    
-    # Admin panel
-    <LocationMatch "^/siprada3/admin/">
-        SecRuleEngine Off
-    </LocationMatch>
-    
-    # API endpoints
-    <LocationMatch "^/siprada3/api/">
-        SecRuleEngine Off
-    </LocationMatch>
-</IfModule>
-
 # Security Headers
 <IfModule mod_headers.c>
     # Prevent clickjacking
@@ -63,7 +22,7 @@ DirectoryIndex index.php
 Options -Indexes
 
 # Protect sensitive files
-<FilesMatch "^\\.">
+<FilesMatch "^\.">
     Order allow,deny
     Deny from all
 </FilesMatch>

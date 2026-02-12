@@ -67,27 +67,33 @@ $username = 'root';          // Default XAMPP/Laragon: root
 $password = '';              // Default XAMPP/Laragon: kosong
 ```
 
-### 3.2 Konfigurasi WhatsApp (Untuk Notifikasi)
+### 3.2 Konfigurasi Email (Untuk Notifikasi)
 
-1.  **Duplicate Template**: Copy file `config/whatsapp.example.php` menjadi `config/whatsapp.php`.
-2.  Buka `config/whatsapp.php` dan sesuaikan:
+1.  **Duplicate Template**: Copy file `config/email.example.php` menjadi `config/email.php`.
+2.  Buka `config/email.php` dan sesuaikan:
 
 ```php
-// config/whatsapp.php
+// config/email.php
 
-// 1. Masukkan API Token dari Fonnte
-define('WA_API_TOKEN', 'token_fonnte_anda');
+// 1. Masukkan Email & App Password Pengirim
+define('SMTP_USERNAME', 'email_anda@gmail.com');
+define('SMTP_PASSWORD', 'app_password_anda'); // BUKAN password login gmail biasa!
 
-// 2. Masukkan Nomor WhatsApp Admin (Penerima notifikasi booking baru)
-define('WA_ADMIN_PHONE', '628123456789'); // Format: 628xxx
+// 2. Masukkan Email Admin (Penerima notifikasi booking baru)
+define('ADMIN_EMAIL', 'email_admin@gmail.com');
+
+// 3. Konfigurasi Tampilan Pengirim (Opsional)
+define('EMAIL_FROM_ADDRESS', 'email_anda@gmail.com');
+define('EMAIL_FROM_NAME', 'Sistem Peminjaman BAPPEDA');
 ```
 
-> **Cara Mendapatkan API Token Fonnte**:
+> **Cara Mendapatkan App Password Gmail**:
 >
-> 1. Daftar di https://fonnte.com
-> 2. Login dan masuk ke Dashboard.
-> 3. Copy API Token yang tersedia.
-> 4. Paste ke `WA_API_TOKEN`.
+> 1. Login ke Akun Google > Manage Account > Security.
+> 2. Pastikan **2-Step Verification** sudah ON.
+> 3. Cari menu **App passwords**.
+> 4. Generate password baru (pilih app: Mail, device: Windows Computer).
+> 5. Copy 16 karakter password tersebut ke `SMTP_PASSWORD`.
 
 ---
 
@@ -109,7 +115,7 @@ Jika menggunakan Windows (Localhost), langkah ini biasanya **tidak perlu**. Namu
     - Password: `bappeda2026`
 3.  **Coba Booking**:
     - Lakukan simulasi peminjaman ruangan dari halaman depan.
-    - Pastikan notifikasi WhatsApp terkirim.
+    - Pastikan email notifikasi terkirim (cek folder Spam jika tidak ada di Inbox).
 
 ---
 
@@ -119,9 +125,9 @@ Jika menggunakan Windows (Localhost), langkah ini biasanya **tidak perlu**. Namu
 
 - A: Cek kembali `config/database.php`. Pastikan username/password MySQL benar.
 
-**Q: WhatsApp tidak terkirim?**
+**Q: Email tidak terkirim?**
 
-- A: Pastikan API Token Fonnte valid dan masih aktif. Cek juga format nomor WhatsApp (harus 628xxx).
+- A: Pastikan Anda menggunakan **App Password**, bukan password login Gmail biasa. Cek juga koneksi internet.
 
 **Q: Tidak bisa upload gambar/file?**
 

@@ -3,7 +3,7 @@ require_once '../includes/functions.php';
 
 // Jika sudah login, lempar ke dashboard
 if (isset($_SESSION['admin_logged_in'])) {
-    redirect('admin/index.php');
+    redirect('index.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_username'] = $admin['username'];
             $_SESSION['CREATED'] = time(); // Reset session creation time
 
-            redirect('admin/index.php');
+            redirect('index.php');
         } else {
             set_flash_message('error', "Username atau password salah");
         }

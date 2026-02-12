@@ -310,7 +310,7 @@ require 'includes/header.php';
                             <th class="px-6 py-4 text-left font-semibold">Waktu</th>
                             <th class="px-6 py-4 text-left font-semibold">Ruangan</th>
                             <th class="px-6 py-4 text-left font-semibold">Kegiatan</th>
-                            <th class="px-6 py-4 text-left font-semibold">Instansi / Unit Kerja</th>
+                            <th class="px-6 py-4 text-left font-semibold">Instansi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -351,42 +351,40 @@ require 'includes/header.php';
                     </tbody>
                 </table>
             </div>
-
+            
             <!-- Pagination -->
             <?php if ($totalPages > 1): ?>
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="text-sm text-gray-600">
-                            Menampilkan halaman <?= $page ?> dari <?= $totalPages ?>
-                            (Total: <?= $totalJadwal ?> jadwal)
-                        </div>
-                        <div class="flex gap-2">
-                            <?php if ($page > 1): ?>
-                                <a href="?page=<?= $page - 1 ?>#jadwal"
-                                    class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-semibold">
-                                    <i class="fas fa-chevron-left mr-1"></i> Prev
-                                </a>
-                            <?php else: ?>
-                                <span
-                                    class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-400 font-semibold cursor-not-allowed">
-                                    <i class="fas fa-chevron-left mr-1"></i> Prev
-                                </span>
-                            <?php endif; ?>
-
-                            <?php if ($page < $totalPages): ?>
-                                <a href="?page=<?= $page + 1 ?>#jadwal"
-                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold">
-                                    Next <i class="fas fa-chevron-right ml-1"></i>
-                                </a>
-                            <?php else: ?>
-                                <span
-                                    class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-400 font-semibold cursor-not-allowed">
-                                    Next <i class="fas fa-chevron-right ml-1"></i>
-                                </span>
-                            <?php endif; ?>
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-600">
+                                Menampilkan halaman <?= $page ?> dari <?= $totalPages ?> 
+                                (Total: <?= $totalJadwal ?> jadwal)
+                            </div>
+                            <div class="flex gap-2">
+                                <?php if ($page > 1): ?>
+                                        <a href="?page=<?= $page - 1 ?>#jadwal" 
+                                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-semibold">
+                                            <i class="fas fa-chevron-left mr-1"></i> Prev
+                                        </a>
+                                <?php else: ?>
+                                        <span class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-400 font-semibold cursor-not-allowed">
+                                            <i class="fas fa-chevron-left mr-1"></i> Prev
+                                        </span>
+                                <?php endif; ?>
+                            
+                                <?php if ($page < $totalPages): ?>
+                                        <a href="?page=<?= $page + 1 ?>#jadwal" 
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold">
+                                            Next <i class="fas fa-chevron-right ml-1"></i>
+                                        </a>
+                                <?php else: ?>
+                                        <span class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-400 font-semibold cursor-not-allowed">
+                                            Next <i class="fas fa-chevron-right ml-1"></i>
+                                        </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
-                </div>
             <?php endif; ?>
         </div>
     </div>

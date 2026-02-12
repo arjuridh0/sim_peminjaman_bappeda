@@ -89,7 +89,7 @@ sudo chmod 755 /var/www/sim_peminjaman_bappeda/assets/files
 
 ## ⚙️ Langkah 4: Konfigurasi Aplikasi
 
-Edit file `config/database.php` dan `config/whatsapp.php` di server.
+Edit file `config/database.php` dan `config/email.php` di server.
 
 ```bash
 nano /var/www/sim_peminjaman_bappeda/config/database.php
@@ -98,10 +98,10 @@ nano /var/www/sim_peminjaman_bappeda/config/database.php
 Sesuaikan dengan user database production yang baru dibuat.
 
 ```bash
-nano /var/www/sim_peminjaman_bappeda/config/whatsapp.php
+nano /var/www/sim_peminjaman_bappeda/config/email.php
 ```
 
-Sesuaikan API Token Fonnte dan nomor admin WhatsApp.
+Sesuaikan SMTP config (Gmail App Password).
 
 ---
 
@@ -158,7 +158,7 @@ Ikuti instruksi di layar. Pilih opsi **Redirect HTTP to HTTPS**.
 1.  Buka domain di browser.
 2.  Coba login admin.
 3.  Test upload gambar (pastikan permission benar).
-4.  Test kirim notifikasi WhatsApp booking.
+4.  Test kirim email booking.
 
 ---
 

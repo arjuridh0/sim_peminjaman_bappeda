@@ -40,8 +40,8 @@ $title = 'Tambah Booking Manual';
                 foreach ($rooms as $room):
                     ?>
                     <label class="relative cursor-pointer group">
-                        <input type="radio" name="room_id" value="<?= $room['id'] ?>" class="peer sr-only room-radio"
-                            required onchange="syncRoomSelection(this.value)">
+                        <input type="radio" name="room_id" value="<?= $room['id'] ?>" class="peer sr-only room-radio" required
+                            onchange="syncRoomSelection(this.value)">
                         <div
                             class="p-4 border rounded-xl hover:bg-gray-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:ring-2 peer-checked:ring-blue-200 transition-all h-full flex flex-col justify-between">
                             <div>
@@ -130,7 +130,7 @@ $title = 'Tambah Booking Manual';
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Unit Kerja <span
                                 class="text-xs font-normal text-gray-500">(Opsional)</span></label>
-                        <input type="text" name="divisi" placeholder="Cth: Umum"
+                        <input type="text" name="divisi" placeholder="Cth: UMPEG"
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                     </div>
                 </div>
@@ -198,28 +198,28 @@ $title = 'Tambah Booking Manual';
                     // Show Grid
                     gridView.classList.remove('hidden');
                     listView.classList.add('hidden');
-
+                    
                     // Style Buttons
                     gridBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
                     gridBtn.classList.remove('text-gray-500');
                     listBtn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
                     listBtn.classList.add('text-gray-500');
-
+                    
                     // Handle Disabled
                     roomSelect.disabled = true;
                     roomRadios.forEach(r => r.disabled = false);
-
+                    
                 } else {
                     // Show List
                     gridView.classList.add('hidden');
                     listView.classList.remove('hidden');
-
+                    
                     // Style Buttons
                     listBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
                     listBtn.classList.remove('text-gray-500');
                     gridBtn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
                     gridBtn.classList.add('text-gray-500');
-
+                    
                     // Handle Disabled
                     roomSelect.disabled = false;
                     roomRadios.forEach(r => r.disabled = true);
@@ -230,8 +230,8 @@ $title = 'Tambah Booking Manual';
             function syncRoomSelection(val) {
                 // Sync Dropdown
                 const select = document.getElementById('roomSelect');
-                if (select.value !== val) select.value = val;
-
+                if(select.value !== val) select.value = val;
+                
                 // Sync Radio
                 const radios = document.getElementsByName('room_id');
                 for (let radio of radios) {
@@ -248,19 +248,6 @@ $title = 'Tambah Booking Manual';
         e.preventDefault();
 
         // Prepare Data
-        const formData = new FormData(this);
-
-        // Validation: At least email or phone must be filled
-        const email = formData.get('user_email');
-        const phone = formData.get('phone_number');
-        if (!email && !phone) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Kontak Diperlukan',
-                text: 'Harap isi minimal satu kontak (Email atau Nomor WhatsApp)!'
-            });
-            return;
-        }
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
 
