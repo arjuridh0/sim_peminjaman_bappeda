@@ -74,6 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Execute Cancel
     update_booking_status($bookingId, 'dibatalkan', $reason);
 
+    // Send Notification (Non-blocking)
+    try {
+        // Update booking array with new status for notification
+        $booking['status'] = 'dibatalkan';
+        $booking['cancel_reason'] = $reason;
+
+        send_booking_notification($booking, 'cancellation');
+    } catch (Exception $e) {
+        error_log("Cancellation Notification Failed: " . $e->getMessage());
+    }
+
     set_flash_message('success', "Booking berhasil dibatalkan.");
     // Redirect back to access view if we have token, otherwise generic
     if (isset($_SESSION['access_token']) && $_SESSION['access_token'] === $booking['qr_token']) {

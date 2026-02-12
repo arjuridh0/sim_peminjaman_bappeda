@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($booking) {
                 // Send notification (wrapped in try-catch to prevent blocking)
                 try {
-                    send_approval_notification($booking);
+                    send_booking_notification($booking, 'approval'); // Unified notification
                 } catch (Exception $e) {
                     error_log("Approval notification failed: " . $e->getMessage());
                 }
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($booking) {
                 // Send notification (wrapped in try-catch to prevent blocking)
                 try {
-                    send_rejection_notification($booking);
+                    send_booking_notification($booking, 'rejection'); // Unified notification
                 } catch (Exception $e) {
                     error_log("Rejection notification failed: " . $e->getMessage());
                 }
@@ -51,7 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reason = "Dibatalkan oleh Admin";
             update_booking_status($bookingId, 'dibatalkan', $reason);
 
-            // Notification could be added here
+            // Notification logic for admin cancellation
+            $booking = get_booking_by_id($bookingId);
+            if ($booking) {
+                try {
+                    $booking['cancel_reason'] = $reason;
+                    send_booking_notification($booking, 'cancellation');
+                } catch (Exception $e) {
+                    error_log("Cancellation info failed: " . $e->getMessage());
+                }
+            }
             set_flash_message('success', 'Booking berhasil dibatalkan.');
         }
     }

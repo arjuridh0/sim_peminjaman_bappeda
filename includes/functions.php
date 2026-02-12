@@ -3,7 +3,14 @@
 
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email.php';
 require_once __DIR__ . '/../config/whatsapp.php';
+
+// PHPMailer Autoload
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 // Start Session with Security Enhancements
 if (session_status() === PHP_SESSION_NONE) {
@@ -224,7 +231,8 @@ function send_whatsapp($target, $message)
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
+            CURLOPT_TIMEOUT => 3, // Timeout after 3 seconds
+            CURLOPT_CONNECTTIMEOUT => 3, // Connection timeout
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
@@ -927,4 +935,233 @@ function delete_room($id)
     global $pdo;
     $stmt = $pdo->prepare("DELETE FROM rooms WHERE id = ?");
     return $stmt->execute([$id]);
+}
+
+// ==============================================================================
+// EMAIL NOTIFICATION FUNCTIONS
+// ==============================================================================
+
+/**
+ * Send Email using PHPMailer
+ * 
+ * @param string $to Recipient email
+ * @param string $subject Email subject
+ * @param string $body Email HTML body
+ * @return bool Success status
+ */
+function send_email($to, $subject, $body)
+{
+    // Check if Email config exists
+    if (!defined('SMTP_HOST') || !defined('SMTP_USERNAME')) {
+        error_log("Email Error: Configuration not found.");
+        return false;
+    }
+
+    $mail = new PHPMailer(true);
+
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = SMTP_HOST;
+        $mail->SMTPAuth = SMTP_AUTH;
+        $mail->Username = SMTP_USERNAME;
+        $mail->Password = SMTP_PASSWORD;
+        $mail->SMTPSecure = SMTP_ENCRYPTION;
+        $mail->Port = SMTP_PORT;
+        $mail->CharSet = defined('EMAIL_CHARSET') ? EMAIL_CHARSET : 'UTF-8';
+        $mail->Timeout = 3; // Timeout after 3 seconds
+
+        // Recipients
+        $mail->setFrom(EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME);
+        $mail->addAddress($to);
+        if (defined('EMAIL_REPLY_TO')) {
+            $mail->addReplyTo(EMAIL_REPLY_TO, EMAIL_FROM_NAME);
+        }
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $body;
+        $mail->AltBody = strip_tags($body);
+
+        $mail->send();
+        error_log("Email sent successfully to: $to");
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Email Sending Failed: {$mail->ErrorInfo}");
+        return false;
+    }
+}
+
+/**
+ * UNIFIED NOTIFICATION WRAPPER
+ * Sends notification via WhatsApp AND/OR Email based on available contact info.
+ * 
+ * @param array $booking Booking data
+ * @param string $type Type of notification: 'booking', 'approval', 'rejection', 'cancellation'
+ * @return void (Does not return value to prevent blocking)
+ */
+function send_booking_notification($booking, $type)
+{
+    // 1. WhatsApp Logic
+    if (!empty($booking['phone_number'])) {
+        try {
+            switch ($type) {
+                case 'booking':
+                    send_booking_confirmation($booking);
+                    break;
+                case 'approval':
+                    send_approval_notification($booking);
+                    break;
+                case 'rejection':
+                    send_rejection_notification($booking);
+                    break;
+                case 'cancellation':
+                    send_cancellation_notification_wa($booking);
+                    break;
+            }
+        } catch (Exception $e) {
+            error_log("WA Notification Error ($type): " . $e->getMessage());
+        }
+    }
+
+    // 2. Email Logic
+    if (!empty($booking['user_email'])) {
+        try {
+            switch ($type) {
+                case 'booking':
+                    send_booking_confirmation_email($booking);
+                    break;
+                case 'approval':
+                    send_approval_notification_email($booking);
+                    break;
+                case 'rejection':
+                    send_rejection_notification_email($booking);
+                    break;
+                case 'cancellation':
+                    send_cancellation_notification_email($booking);
+                    break;
+            }
+        } catch (Exception $e) {
+            error_log("Email Notification Error ($type): " . $e->getMessage());
+        }
+    }
+}
+
+// --- Specific Email Functions ---
+
+function send_booking_confirmation_email($booking)
+{
+    $subject = "Konfirmasi Peminjaman Ruangan - " . $booking['qr_token'];
+
+    // Simple HTML Template
+    $body = "
+    <h3>Konfirmasi Peminjaman Ruangan</h3>
+    <p>Halo <strong>" . htmlspecialchars($booking['nama_peminjam']) . "</strong>,</p>
+    <p>Permintaan peminjaman ruangan Anda telah diterima dan sedang menunggu persetujuan admin.</p>
+    
+    <table border='1' cellpadding='10' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px;'>
+        <tr><td style='background:#f4f4f4;'><strong>Kode Booking</strong></td><td><strong>" . $booking['qr_token'] . "</strong></td></tr>
+        <tr><td><strong>Ruangan</strong></td><td>" . htmlspecialchars($booking['room_name']) . "</td></tr>
+        <tr><td><strong>Kegiatan</strong></td><td>" . htmlspecialchars($booking['kegiatan']) . "</td></tr>
+        <tr><td><strong>Tanggal</strong></td><td>" . date('d M Y', strtotime($booking['tanggal'])) . "</td></tr>
+        <tr><td><strong>Waktu</strong></td><td>" . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "</td></tr>
+        <tr><td><strong>Status</strong></td><td>Menunggu Persetujuan</td></tr>
+    </table>
+
+    <p><br>Silakan cek status peminjaman Anda secara berkala melalui link berikut:<br>
+    <a href='" . base_url('booking_status.php?search=' . $booking['qr_token']) . "'>Cek Status Peminjaman</a></p>
+    
+    <p>Terima Kasih,<br>BAPPEDA Provinsi Jawa Tengah</p>
+    ";
+
+    return send_email($booking['user_email'], $subject, $body);
+}
+
+function send_approval_notification_email($booking)
+{
+    $subject = "Peminjaman DISETUJUI - " . $booking['qr_token'];
+
+    $body = "
+    <h3 style='color:green;'>Peminjaman Disetujui ✅</h3>
+    <p>Halo <strong>" . htmlspecialchars($booking['nama_peminjam']) . "</strong>,</p>
+    <p>Kabar gembira! Pengajuan peminjaman ruangan Anda telah <strong>DISETUJUI</strong>.</p>
+    
+    <table border='1' cellpadding='10' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px;'>
+        <tr><td style='background:#f4f4f4;'><strong>Kode Booking</strong></td><td><strong>" . $booking['qr_token'] . "</strong></td></tr>
+        <tr><td><strong>Ruangan</strong></td><td>" . htmlspecialchars($booking['room_name']) . "</td></tr>
+        <tr><td><strong>Kegiatan</strong></td><td>" . htmlspecialchars($booking['kegiatan']) . "</td></tr>
+        <tr><td><strong>Tanggal</strong></td><td>" . date('d M Y', strtotime($booking['tanggal'])) . "</td></tr>
+        <tr><td><strong>Waktu</strong></td><td>" . date('H:i', strtotime($booking['waktu_mulai'])) . " - " . date('H:i', strtotime($booking['waktu_selesai'])) . "</td></tr>
+    </table>
+
+    <p><strong>Catatan:</strong><br>Harap hadir tepat waktu dan menjaga kebersihan ruangan.</p>
+    
+    <p>Terima Kasih,<br>BAPPEDA Provinsi Jawa Tengah</p>
+    ";
+
+    return send_email($booking['user_email'], $subject, $body);
+}
+
+function send_rejection_notification_email($booking)
+{
+    $subject = "Peminjaman DITOLAK - " . $booking['qr_token'];
+
+    $body = "
+    <h3 style='color:red;'>Peminjaman Ditolak ❌</h3>
+    <p>Halo <strong>" . htmlspecialchars($booking['nama_peminjam']) . "</strong>,</p>
+    <p>Mohon maaf, pengajuan peminjaman ruangan Anda <strong>TIDAK DAPAT DISETUJUI</strong>.</p>
+    
+    <table border='1' cellpadding='10' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px;'>
+        <tr><td style='background:#f4f4f4;'><strong>Kode Booking</strong></td><td><strong>" . $booking['qr_token'] . "</strong></td></tr>
+        <tr><td><strong>Ruangan</strong></td><td>" . htmlspecialchars($booking['room_name']) . "</td></tr>
+        <tr><td><strong>Tanggal</strong></td><td>" . date('d M Y', strtotime($booking['tanggal'])) . "</td></tr>
+        <tr><td><strong>Alasan Penolakan</strong></td><td style='color:red;'>" . htmlspecialchars($booking['rejection_reason'] ?? '-') . "</td></tr>
+    </table>
+
+    <p>Silakan ajukan peminjaman untuk waktu atau ruangan lain.</p>
+    
+    <p>Terima Kasih,<br>BAPPEDA Provinsi Jawa Tengah</p>
+    ";
+
+    return send_email($booking['user_email'], $subject, $body);
+}
+
+function send_cancellation_notification_email($booking)
+{
+    $subject = "Peminjaman DIBATALKAN - " . $booking['qr_token'];
+
+    $body = "
+    <h3 style='color:orange;'>Peminjaman Dibatalkan ⚠️</h3>
+    <p>Halo <strong>" . htmlspecialchars($booking['nama_peminjam']) . "</strong>,</p>
+    <p>Peminjaman ruangan berikut telah <strong>DIBATALKAN</strong>.</p>
+    
+    <table border='1' cellpadding='10' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px;'>
+        <tr><td style='background:#f4f4f4;'><strong>Kode Booking</strong></td><td><strong>" . $booking['qr_token'] . "</strong></td></tr>
+        <tr><td><strong>Ruangan</strong></td><td>" . htmlspecialchars($booking['room_name']) . "</td></tr>
+        <tr><td><strong>Tanggal</strong></td><td>" . date('d M Y', strtotime($booking['tanggal'])) . "</td></tr>
+        <tr><td><strong>Alasan Pembatalan</strong></td><td>" . htmlspecialchars($booking['cancel_reason'] ?? 'Dibatalkan oleh peminjam') . "</td></tr>
+    </table>
+    
+    <p>Terima Kasih,<br>BAPPEDA Provinsi Jawa Tengah</p>
+    ";
+
+    return send_email($booking['user_email'], $subject, $body);
+}
+
+// Helper for Cancellation WA
+function send_cancellation_notification_wa($booking)
+{
+    if (empty($booking['phone_number']))
+        return false;
+
+    $waMessage = "⚠️ *PEMINJAMAN DIBATALKAN* ⚠️\n\n";
+    $waMessage .= "Halo " . $booking['nama_peminjam'] . ",\n";
+    $waMessage .= "Peminjaman ruangan berikut telah *DIBATALKAN*.\n\n";
+    $waMessage .= "🏢 *Ruangan:* " . $booking['room_name'] . "\n";
+    $waMessage .= "📅 *Tanggal:* " . date('d M Y', strtotime($booking['tanggal'])) . "\n";
+    $waMessage .= "📝 *Alasan:* " . ($booking['cancel_reason'] ?? 'Dibatalkan oleh peminjam') . "\n";
+
+    return send_whatsapp($booking['phone_number'], $waMessage);
 }

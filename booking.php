@@ -20,6 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // 1.1 Custom Validation: Email OR Phone Required
+    $phoneNumber = $_POST['phone_number'] ?? '';
+    $userEmail = $_POST['user_email'] ?? '';
+
+    if (empty($phoneNumber) && empty($userEmail)) {
+        set_flash_message('error', "Wajib mengisi salah satu: Nomor WhatsApp atau Email untuk notifikasi.");
+        redirect_back();
+    }
+
     $roomId = $_POST['room_id'];
     $tanggal = $_POST['tanggal'];
     $waktuMulai = $_POST['waktu_mulai'];
@@ -148,7 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'waktu_mulai' => $waktuMulai,
             'waktu_selesai' => $waktuSelesai,
             'file_pendukung' => $filePath,
-            'status' => 'menunggu' // Explicitly set status
+            'status' => 'menunggu', // Explicitly set status
+            'user_email' => $userEmail,
+            'phone_number' => $phoneNumber
         ];
 
         // Insert Main Booking
@@ -160,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add recurring flags to $bookingData if needed, but create_booking function might not accept extra fields unless updated.
         // Easier to direct insert or update create_booking. Let's direct insert for full control in this block.
 
-        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
+        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, is_recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?)");
 
         // Generate QR Token (Use the new readable format function)
         $qrToken = generate_booking_code($tanggal, $waktuMulai);
@@ -169,7 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $roomId,
             $_POST['nama_peminjam'],
-            $_POST['phone_number'] ?? null,
+            $phoneNumber,
+            $userEmail,
             $_POST['divisi'],
             $_POST['instansi'],
             $_POST['kegiatan'],
@@ -191,14 +203,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtPattern->execute([$parentId, $recurrenceType, $endDate]);
 
             // Insert Children
-            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
+            $stmtChild = $pdo->prepare("INSERT INTO bookings (room_id, nama_peminjam, phone_number, user_email, divisi, instansi, kegiatan, jumlah_peserta, tanggal, waktu_mulai, waktu_selesai, file_pendukung, qr_token, status, parent_booking_id, recurrence_instance_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu', ?, ?)");
 
             foreach ($recurrenceDates as $rDate) {
                 $childToken = generate_booking_code($rDate, $waktuMulai);
                 $stmtChild->execute([
                     $roomId,
                     $_POST['nama_peminjam'],
-                    $_POST['phone_number'] ?? null,
+                    $phoneNumber,
+                    $userEmail,
                     $_POST['divisi'],
                     $_POST['instansi'],
                     $_POST['kegiatan'],
@@ -233,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Even if notification fails, booking is already saved
         try {
             send_booking_notification_to_admin($bookingData);
-            send_booking_confirmation($bookingData);
+            send_booking_notification($bookingData, 'booking'); // Unified notification
         } catch (Exception $notifError) {
             // Log error but don't stop the process
             error_log("Notification failed: " . $notifError->getMessage());
@@ -440,17 +453,37 @@ require 'includes/header.php';
                     </div>
 
 
-                    <!-- WhatsApp (Wajib) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp <span
-                                class="text-red-500">*</span>
-                        </label>
-                        <input type="tel" name="phone_number" id="phoneInput" placeholder="08xxx" required
-                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
-                        <p class="mt-1 text-sm text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>Nomor WhatsApp wajib diisi untuk menerima notifikasi.
-                        </p>
+                    <!-- Contact Wrapper (Grid 2 Cols) -->
+                    <div
+                        class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <div class="col-span-1 md:col-span-2 mb-1">
+                            <label class="block text-sm font-bold text-gray-700">
+                                <i class="fas fa-address-book text-blue-600 mr-1"></i>Informasi Kontak (Wajib Isi Salah
+                                Satu)
+                            </label>
+                            <p class="text-xs text-gray-500">Anda akan menerima notifikasi status peminjaman melalui
+                                kontak yang diisi.</p>
+                        </div>
+
+                        <!-- WhatsApp (Opsional jika email diisi) -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fab fa-whatsapp text-green-600 mr-1"></i>No. WhatsApp
+                            </label>
+                            <input type="tel" name="phone_number" id="phoneInput"
+                                placeholder="08xxx (Wajib jika tanpa Email)"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                        </div>
+
+                        <!-- Email (Opsional jika WA diisi) -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-envelope text-red-600 mr-1"></i>Email
+                            </label>
+                            <input type="email" name="user_email" id="emailInput"
+                                placeholder="contoh@email.com (Wajib jika tanpa WA)"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none">
+                        </div>
                     </div>
 
 
