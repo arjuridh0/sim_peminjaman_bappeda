@@ -9,18 +9,42 @@ DirectoryIndex index.php
 # ============================================
 # ModSecurity Bypass for Booking System
 # ============================================
-# Disable ModSecurity for booking.php to prevent false positives
-<IfModule mod_security.c>
-    <Files "booking.php">
-        SecRuleEngine Off
-    </Files>
-</IfModule>
+# CRITICAL: Disable ModSecurity for all booking-related files
+# to prevent false positives blocking legitimate POST requests
 
-# Disable ModSecurity for API endpoints
 <IfModule mod_security.c>
-    <FilesMatch "^(admin_update_booking_status|get_bookings)\.php$">
+    # Main booking pages
+    <FilesMatch "^(booking|booking_status|room_detail|calendar)\.php$">
         SecRuleEngine Off
     </FilesMatch>
+    
+    # Admin panel (entire admin folder)
+    <LocationMatch "^/siprada3/admin/">
+        SecRuleEngine Off
+    </LocationMatch>
+    
+    # API endpoints
+    <LocationMatch "^/siprada3/api/">
+        SecRuleEngine Off
+    </LocationMatch>
+</IfModule>
+
+# Alternative syntax for mod_security2
+<IfModule mod_security2.c>
+    # Main booking pages
+    <FilesMatch "^(booking|booking_status|room_detail|calendar)\.php$">
+        SecRuleEngine Off
+    </FilesMatch>
+    
+    # Admin panel
+    <LocationMatch "^/siprada3/admin/">
+        SecRuleEngine Off
+    </LocationMatch>
+    
+    # API endpoints
+    <LocationMatch "^/siprada3/api/">
+        SecRuleEngine Off
+    </LocationMatch>
 </IfModule>
 
 # Security Headers
@@ -39,7 +63,7 @@ DirectoryIndex index.php
 Options -Indexes
 
 # Protect sensitive files
-<FilesMatch "^\.">
+<FilesMatch "^\\.">
     Order allow,deny
     Deny from all
 </FilesMatch>
